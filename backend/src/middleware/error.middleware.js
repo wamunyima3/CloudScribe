@@ -1,26 +1,54 @@
-const logger = require('../utils/logger');
-const { ApiResponse } = require('../utils/response');
+const { logger } = require('../utils/logger');
+const { ApiResponse, createErrorResponse } = require('../utils/response');
 
 const errorHandler = (err, req, res, next) => {
-  logger.error(err.stack);
+  logger.error('Error occurred:', {
+    error: err.message,
+    stack: err.stack,
+    requestId: req.requestId
+  });
 
-  if (err.name === 'ValidationError') {
-    return ApiResponse.error(res, err.message, 400, err.errors);
+  // Handle different types of errors
+  switch (err.name) {
+    case 'ValidationError':
+      return ApiResponse.error(
+        res,
+        'Validation failed',
+        400,
+        createErrorResponse(err.errors)
+      );
+
+    case 'NotFoundError':
+      return ApiResponse.error(
+        res,
+        err.message || 'Resource not found',
+        404
+      );
+
+    case 'UnauthorizedError':
+      return ApiResponse.error(
+        res,
+        err.message || 'Unauthorized access',
+        401
+      );
+
+    case 'ForbiddenError':
+      return ApiResponse.error(
+        res,
+        err.message || 'Access forbidden',
+        403
+      );
+
+    default:
+      return ApiResponse.error(
+        res,
+        process.env.NODE_ENV === 'production' 
+          ? 'Internal server error' 
+          : err.message,
+        err.statusCode || 500,
+        process.env.NODE_ENV === 'development' ? err.stack : undefined
+      );
   }
-
-  if (err.name === 'NotFoundError') {
-    return ApiResponse.error(res, err.message, 404);
-  }
-
-  if (err.name === 'UnauthorizedError') {
-    return ApiResponse.error(res, 'Unauthorized access', 401);
-  }
-
-  return ApiResponse.error(
-    res, 
-    process.env.NODE_ENV === 'development' ? err.message : 'Internal server error',
-    500
-  );
 };
 
 module.exports = { errorHandler }; 

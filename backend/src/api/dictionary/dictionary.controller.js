@@ -1,34 +1,51 @@
-const { ApiResponse } = require('../../utils/response');
 const DictionaryService = require('./dictionary.service');
+const { ApiResponse, createPaginationOptions } = require('../../utils/response');
 const logger = require('../../utils/logger');
 
 class DictionaryController {
   static async searchWords(req, res) {
     try {
-      const { query, language, difficulty, page = 1, limit = 10 } = req.query;
-      const result = await DictionaryService.searchWords({
+      const pagination = createPaginationOptions(req.query);
+      const { query, language, difficulty, tags } = req.query;
+
+      const { data, total } = await DictionaryService.searchWords({
         query,
         language,
         difficulty,
-        page: parseInt(page),
-        limit: parseInt(limit)
+        tags,
+        ...pagination
       });
-      
-      return ApiResponse.paginate(res, result.data, page, limit, result.total);
+
+      return ApiResponse.paginated(
+        res,
+        data,
+        pagination.page,
+        pagination.limit,
+        total,
+        'Words retrieved successfully'
+      );
     } catch (error) {
-      logger.error('Error in searchWords:', error);
-      return ApiResponse.error(res, error.message);
+      logger.error('Search words error:', error);
+      throw error;
     }
   }
 
   static async addWord(req, res) {
     try {
-      const wordData = { ...req.body, addedById: req.user.id };
-      const word = await DictionaryService.addWord(wordData);
-      return ApiResponse.success(res, word, 'Word added successfully', 201);
+      const word = await DictionaryService.addWord({
+        ...req.body,
+        addedById: req.user.id
+      });
+
+      return ApiResponse.success(
+        res,
+        word,
+        'Word added successfully',
+        201
+      );
     } catch (error) {
-      logger.error('Error in addWord:', error);
-      return ApiResponse.error(res, error.message);
+      logger.error('Add word error:', error);
+      throw error;
     }
   }
 
