@@ -1,6 +1,7 @@
 const DictionaryService = require('./dictionary.service');
 const { ApiResponse, createPaginationOptions } = require('../../utils/response');
 const logger = require('../../utils/logger');
+const { Permissions } = require('../../config/permissions');
 
 class DictionaryController {
   static async searchWords(req, res) {
@@ -32,17 +33,15 @@ class DictionaryController {
 
   static async addWord(req, res) {
     try {
-      const word = await DictionaryService.addWord({
+      const wordData = {
         ...req.body,
-        addedById: req.user.id
-      });
+        addedById: req.user.id,
+        // Auto-approve if user is ADMIN or CURATOR
+        approved: req.permissions.includes(Permissions.WORD_APPROVE)
+      };
 
-      return ApiResponse.success(
-        res,
-        word,
-        'Word added successfully',
-        201
-      );
+      const word = await DictionaryService.addWord(wordData);
+      return ApiResponse.success(res, word, 'Word added successfully', 201);
     } catch (error) {
       logger.error('Add word error:', error);
       throw error;
@@ -52,11 +51,18 @@ class DictionaryController {
   static async updateWord(req, res) {
     try {
       const { id } = req.params;
-      const word = await DictionaryService.updateWord(id, req.body);
+      const canApprove = req.permissions.includes(Permissions.WORD_APPROVE);
+      
+      const word = await DictionaryService.updateWord(id, {
+        ...req.body,
+        // Only allow approval status change if user has permission
+        approved: canApprove ? req.body.approved : undefined
+      });
+
       return ApiResponse.success(res, word, 'Word updated successfully');
     } catch (error) {
-      logger.error('Error in updateWord:', error);
-      return ApiResponse.error(res, error.message);
+      logger.error('Update word error:', error);
+      throw error;
     }
   }
 

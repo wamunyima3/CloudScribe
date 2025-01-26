@@ -1,31 +1,37 @@
 const express = require('express');
-const { authMiddleware, roleCheck } = require('../../middleware/auth.middleware');
-const { validate } = require('../../middleware/validate.middleware');
 const DictionaryController = require('./dictionary.controller');
-const { wordSchema, translationSchema } = require('./dictionary.validation');
+const { validate } = require('../../middleware/validate.middleware');
+const { authMiddleware } = require('../../middleware/auth.middleware');
+const RBACMiddleware = require('../../middleware/rbac.middleware');
+const { Permissions } = require('../../config/permissions');
+const { dictionarySchema } = require('./dictionary.validation');
 
 const router = express.Router();
 
-router.get('/search', DictionaryController.searchWords);
+// Public routes
+router.get('/search',
+  DictionaryController.searchWords
+);
 
-router.post('/', 
-  authMiddleware, 
-  roleCheck('CONTRIBUTOR', 'CURATOR', 'ADMIN'),
-  validate(wordSchema),
+// Protected routes
+router.use(authMiddleware);
+
+router.post('/',
+  RBACMiddleware.requirePermissions(Permissions.WORD_CREATE),
+  validate(dictionarySchema.createWord),
   DictionaryController.addWord
 );
 
 router.put('/:id',
-  authMiddleware,
-  roleCheck('CURATOR', 'ADMIN'),
-  validate(wordSchema),
+  RBACMiddleware.requirePermissions(Permissions.WORD_UPDATE),
+  RBACMiddleware.requireOwnership(req => req.word.addedById),
+  validate(dictionarySchema.updateWord),
   DictionaryController.updateWord
 );
 
-router.post('/:id/translations',
-  authMiddleware,
-  validate(translationSchema),
-  DictionaryController.addTranslation
+router.post('/:id/approve',
+  RBACMiddleware.requirePermissions(Permissions.WORD_APPROVE),
+  DictionaryController.approveWord
 );
 
 module.exports = router; 
