@@ -8,3 +8,17 @@
 {"clientVersion":"5.22.0","errorCode":"P1012","level":"error","message":"Database connection failed: \u001b[1;91merror\u001b[0m: \u001b[1mError validating datasource `db`: the URL must start with the protocol `postgresql://` or `postgres://`.\u001b[0m\n  \u001b[1;94m-->\u001b[0m  \u001b[4mschema.prisma:13\u001b[0m\n\u001b[1;94m   | \u001b[0m\n\u001b[1;94m12 | \u001b[0m  provider = \"postgresql\"\n\u001b[1;94m13 | \u001b[0m  url      = \u001b[1;91menv(\"DATABASE_URL\")\u001b[0m\n\u001b[1;94m   | \u001b[0m\n\nValidation Error Count: 1","name":"PrismaClientInitializationError","stack":"PrismaClientInitializationError: \u001b[1;91merror\u001b[0m: \u001b[1mError validating datasource `db`: the URL must start with the protocol `postgresql://` or `postgres://`.\u001b[0m\n  \u001b[1;94m-->\u001b[0m  \u001b[4mschema.prisma:13\u001b[0m\n\u001b[1;94m   | \u001b[0m\n\u001b[1;94m12 | \u001b[0m  provider = \"postgresql\"\n\u001b[1;94m13 | \u001b[0m  url      = \u001b[1;91menv(\"DATABASE_URL\")\u001b[0m\n\u001b[1;94m   | \u001b[0m\n\nValidation Error Count: 1\n    at t (/home/ekum/Development/Wamunyima/Projects/CloudScribe/backend/node_modules/@prisma/client/runtime/library.js:112:2488)\n    at async connectDB (/home/ekum/Development/Wamunyima/Projects/CloudScribe/backend/src/config/database.js:11:5)\n    at async startServer (/home/ekum/Development/Wamunyima/Projects/CloudScribe/backend/index.js:12:5)","timestamp":"2025-01-26T14:03:39.059Z"}
 {"level":"info","message":"Database connected successfully","timestamp":"2025-01-26T14:08:47.231Z"}
 {"level":"info","message":"Server running on port 3000","timestamp":"2025-01-26T14:08:47.233Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-01-26T14:22:29.133Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2025-01-26T14:22:29.136Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-01-26T14:22:43.340Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2025-01-26T14:22:43.343Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-01-26T14:22:44.900Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2025-01-26T14:22:44.903Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-01-26T14:22:57.784Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2025-01-26T14:22:57.786Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-01-26T14:23:02.235Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-01-26T14:23:02.238Z"}
+{"level":"info","message":"Server running on port 3000 in development mode","timestamp":"2025-01-26T14:23:02.240Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-01-26T14:23:19.050Z"}
+{"level":"info","message":"Database connected successfully","timestamp":"2025-01-26T14:23:19.051Z"}
+{"level":"info","message":"Server running on port 3000 in development mode","timestamp":"2025-01-26T14:23:19.052Z"}
