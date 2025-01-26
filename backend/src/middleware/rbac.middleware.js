@@ -1,92 +1,115 @@
-const { RolePermissions } = require('../config/permissions');
-const { UnauthorizedError } = require('../utils/errors');
+const { ApiResponse } = require('../utils/response');
 const { logger } = require('../utils/logger');
 
+const roles = {
+  ADMIN: 4,
+  CURATOR: 3,
+  CONTRIBUTOR: 2,
+  USER: 1,
+  VISITOR: 0
+};
+
+const permissions = {
+  // Dictionary permissions
+  'dictionary:create': ['ADMIN', 'CURATOR'],
+  'dictionary:update': ['ADMIN', 'CURATOR'],
+  'dictionary:delete': ['ADMIN'],
+  'dictionary:approve': ['ADMIN', 'CURATOR'],
+  
+  // Story permissions
+  'story:create': ['ADMIN', 'CURATOR', 'CONTRIBUTOR', 'USER'],
+  'story:update': ['ADMIN', 'CURATOR', 'CONTRIBUTOR'],
+  'story:delete': ['ADMIN', 'CURATOR'],
+  'story:moderate': ['ADMIN', 'CURATOR'],
+  
+  // User permissions
+  'user:manage': ['ADMIN'],
+  'user:view': ['ADMIN', 'CURATOR'],
+  
+  // System permissions
+  'system:settings': ['ADMIN'],
+  'system:logs': ['ADMIN']
+};
+
 class RBACMiddleware {
-  // Check if user has required permissions
-  static requirePermissions(...requiredPermissions) {
+  static hasRole(requiredRole) {
     return (req, res, next) => {
       try {
-        const userRole = req.user.role;
-        const userPermissions = RolePermissions[userRole];
-
-        const hasPermission = requiredPermissions.every(permission =>
-          userPermissions.includes(permission)
-        );
-
-        if (!hasPermission) {
-          logger.warn('Permission denied', {
-            userId: req.user.id,
-            role: userRole,
-            requiredPermissions,
-            path: req.path
-          });
-          throw new UnauthorizedError('Insufficient permissions');
-        }
-
-        // Add permissions to request for further use
-        req.permissions = userPermissions;
-        next();
-      } catch (error) {
-        next(error);
-      }
-    };
-  }
-
-  // Check if user has any of the required permissions
-  static requireAnyPermission(...requiredPermissions) {
-    return (req, res, next) => {
-      try {
-        const userRole = req.user.role;
-        const userPermissions = RolePermissions[userRole];
-
-        const hasPermission = requiredPermissions.some(permission =>
-          userPermissions.includes(permission)
-        );
-
-        if (!hasPermission) {
-          logger.warn('Permission denied', {
-            userId: req.user.id,
-            role: userRole,
-            requiredPermissions,
-            path: req.path
-          });
-          throw new UnauthorizedError('Insufficient permissions');
-        }
-
-        req.permissions = userPermissions;
-        next();
-      } catch (error) {
-        next(error);
-      }
-    };
-  }
-
-  // Check if user owns the resource or has admin rights
-  static requireOwnership(getResourceUserId) {
-    return async (req, res, next) => {
-      try {
-        const userRole = req.user.role;
+        const userRole = req.user?.role || 'VISITOR';
         
-        // Admins bypass ownership check
-        if (userRole === 'ADMIN') {
+        if (roles[userRole] >= roles[requiredRole]) {
           return next();
         }
-
-        const resourceUserId = await getResourceUserId(req);
-
-        if (req.user.id !== resourceUserId) {
-          logger.warn('Ownership check failed', {
-            userId: req.user.id,
-            resourceUserId,
-            path: req.path
-          });
-          throw new UnauthorizedError('You do not own this resource');
-        }
-
-        next();
+        
+        logger.warn('Insufficient role access', {
+          userId: req.user?.id,
+          requiredRole,
+          userRole
+        });
+        
+        return ApiResponse.error(res, 'Insufficient permissions', 403);
       } catch (error) {
-        next(error);
+        logger.error('RBAC role check error:', error);
+        return ApiResponse.error(res, 'Authorization error', 500);
+      }
+    };
+  }
+
+  static hasPermission(permission) {
+    return (req, res, next) => {
+      try {
+        const userRole = req.user?.role || 'VISITOR';
+        
+        if (!permissions[permission]) {
+          logger.error(`Unknown permission: ${permission}`);
+          return ApiResponse.error(res, 'Invalid permission configuration', 500);
+        }
+        
+        if (permissions[permission].includes(userRole)) {
+          return next();
+        }
+        
+        logger.warn('Insufficient permission', {
+          userId: req.user?.id,
+          permission,
+          userRole
+        });
+        
+        return ApiResponse.error(res, 'Insufficient permissions', 403);
+      } catch (error) {
+        logger.error('RBAC permission check error:', error);
+        return ApiResponse.error(res, 'Authorization error', 500);
+      }
+    };
+  }
+
+  static hasAnyPermission(permissionList) {
+    return (req, res, next) => {
+      try {
+        const userRole = req.user?.role || 'VISITOR';
+        
+        const hasPermission = permissionList.some(permission => {
+          if (!permissions[permission]) {
+            logger.error(`Unknown permission: ${permission}`);
+            return false;
+          }
+          return permissions[permission].includes(userRole);
+        });
+        
+        if (hasPermission) {
+          return next();
+        }
+        
+        logger.warn('Insufficient permissions', {
+          userId: req.user?.id,
+          permissionList,
+          userRole
+        });
+        
+        return ApiResponse.error(res, 'Insufficient permissions', 403);
+      } catch (error) {
+        logger.error('RBAC permissions check error:', error);
+        return ApiResponse.error(res, 'Authorization error', 500);
       }
     };
   }

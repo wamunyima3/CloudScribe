@@ -33,10 +33,10 @@
   - [x] Add OAuth integration
   - [x] Add session management
 
-- [ ] Role-Based Access Control
-  - [ ] Implement role permissions
-  - [ ] Add role middleware
-  - [ ] Add role assignment logic
+- [x] Role-Based Access Control
+  - [x] Implement role permissions
+  - [x] Add role middleware
+  - [x] Add role assignment logic
 
 ## API Endpoints
 - [ ] Dictionary Module
