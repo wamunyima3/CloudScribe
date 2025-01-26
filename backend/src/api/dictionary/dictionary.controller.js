@@ -7,13 +7,15 @@ class DictionaryController {
   static async searchWords(req, res) {
     try {
       const pagination = createPaginationOptions(req.query);
-      const { query, language, difficulty, tags } = req.query;
+      const { query, language, difficulty, tags, sortBy, order } = req.query;
 
       const { data, total } = await DictionaryService.searchWords({
         query,
         language,
         difficulty,
-        tags,
+        tags: tags?.split(','),
+        sortBy,
+        order,
         ...pagination
       });
 
@@ -36,7 +38,6 @@ class DictionaryController {
       const wordData = {
         ...req.body,
         addedById: req.user.id,
-        // Auto-approve if user is ADMIN or CURATOR
         approved: req.permissions.includes(Permissions.WORD_APPROVE)
       };
 
@@ -55,13 +56,34 @@ class DictionaryController {
       
       const word = await DictionaryService.updateWord(id, {
         ...req.body,
-        // Only allow approval status change if user has permission
         approved: canApprove ? req.body.approved : undefined
       });
 
       return ApiResponse.success(res, word, 'Word updated successfully');
     } catch (error) {
       logger.error('Update word error:', error);
+      throw error;
+    }
+  }
+
+  static async deleteWord(req, res) {
+    try {
+      const { id } = req.params;
+      await DictionaryService.deleteWord(id);
+      return ApiResponse.success(res, null, 'Word deleted successfully');
+    } catch (error) {
+      logger.error('Delete word error:', error);
+      throw error;
+    }
+  }
+
+  static async approveWord(req, res) {
+    try {
+      const { id } = req.params;
+      const word = await DictionaryService.approveWord(id);
+      return ApiResponse.success(res, word, 'Word approved successfully');
+    } catch (error) {
+      logger.error('Approve word error:', error);
       throw error;
     }
   }

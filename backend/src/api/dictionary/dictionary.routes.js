@@ -10,6 +10,7 @@ const router = express.Router();
 
 // Public routes
 router.get('/search',
+  validate(dictionarySchema.searchQuery),
   DictionaryController.searchWords
 );
 
@@ -27,6 +28,12 @@ router.put('/:id',
   RBACMiddleware.requireOwnership(req => req.word.addedById),
   validate(dictionarySchema.updateWord),
   DictionaryController.updateWord
+);
+
+router.delete('/:id',
+  RBACMiddleware.requirePermissions(Permissions.WORD_DELETE),
+  RBACMiddleware.requireOwnership(req => req.word.addedById),
+  DictionaryController.deleteWord
 );
 
 router.post('/:id/approve',
