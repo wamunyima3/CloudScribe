@@ -41,6 +41,32 @@ const createApp = () => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  // Root route
+  app.get('/', (req, res) => {
+    res.json({
+      name: 'CloudScribe API',
+      version: '1.0.0',
+      description: 'Language Learning and Cultural Preservation Platform API',
+      endpoints: {
+        base: '/api',
+        documentation: '/api/docs',
+        health: '/health',
+        auth: {
+          register: '/api/auth/register',
+          login: '/api/auth/login',
+          logout: '/api/auth/logout',
+          profile: '/api/auth/profile'
+        },
+        dictionary: {
+          search: '/api/dictionary/search',
+          addWord: '/api/dictionary',
+          updateWord: '/api/dictionary/:id',
+          addTranslation: '/api/dictionary/:id/translations'
+        }
+      }
+    });
+  });
+
   // API Routes
   app.use('/api', routes);
 
