@@ -1,155 +1,140 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const seedConfig = require('./seed.config');
 const prisma = new PrismaClient();
+
+async function cleanTestData() {
+  console.log('Cleaning up test data...');
+  
+  // Delete all test data (prefixed with TEST_)
+  await Promise.all([
+    prisma.story.deleteMany({
+      where: {
+        OR: [
+          { title: { startsWith: 'TEST_' } },
+          { content: { startsWith: 'TEST:' } }
+        ]
+      }
+    }),
+    prisma.word.deleteMany({
+      where: { original: { startsWith: 'TEST_' } }
+    }),
+    prisma.translation.deleteMany({
+      where: { translation: { startsWith: 'TEST_' } }
+    })
+  ]);
+}
+
+async function createUsers() {
+  const users = {};
+  
+  for (const [key, userData] of Object.entries(seedConfig.users)) {
+    const passwordHash = await bcrypt.hash(userData.password, 10);
+    users[key] = await prisma.user.upsert({
+      where: { email: userData.email },
+      update: {},
+      create: {
+        email: userData.email,
+        username: userData.username,
+        passwordHash,
+        role: userData.role
+      }
+    });
+    console.log(`Created user: ${userData.username} (${userData.role})`);
+  }
+  
+  return users;
+}
+
+async function createLanguages() {
+  const languages = {};
+  
+  for (const langData of seedConfig.languages) {
+    languages[langData.code] = await prisma.language.upsert({
+      where: { code: langData.code },
+      update: {},
+      create: langData
+    });
+    console.log(`Created language: ${langData.name} (${langData.code})`);
+  }
+  
+  return languages;
+}
+
+async function createTags() {
+  const tags = {};
+  
+  for (const tagName of seedConfig.tags) {
+    tags[tagName] = await prisma.tag.upsert({
+      where: { name: tagName },
+      update: {},
+      create: { name: tagName }
+    });
+    console.log(`Created tag: ${tagName}`);
+  }
+  
+  return tags;
+}
 
 async function main() {
   try {
-    // Create admin user
-    const adminPassword = await bcrypt.hash('admin123', 10);
-    const admin = await prisma.user.upsert({
-      where: { email: 'admin@cloudscribe.com' },
-      update: {},
-      create: {
-        email: 'admin@cloudscribe.com',
-        username: 'admin',
-        passwordHash: adminPassword,
-        role: 'ADMIN'
-      }
+    // Clean existing test data
+    await cleanTestData();
+
+    // Create base data
+    const users = await createUsers();
+    const languages = await createLanguages();
+    const tags = await createTags();
+
+    // Create words with translations
+    for (const wordData of seedConfig.words) {
+      const word = await prisma.word.create({
+        data: {
+          original: wordData.original,
+          languageId: languages[wordData.language].id,
+          difficulty: wordData.difficulty,
+          addedById: users.admin.id,
+          approved: true,
+          translations: {
+            create: wordData.translations.map(t => ({
+              translation: t.text,
+              userId: users.admin.id,
+              verified: true
+            }))
+          },
+          tags: {
+            create: wordData.tags.map(tagName => ({
+              tagId: tags[tagName].id
+            }))
+          }
+        }
+      });
+      console.log(`Created word: ${wordData.original}`);
+    }
+
+    // Create stories
+    for (const storyData of seedConfig.stories) {
+      await prisma.story.create({
+        data: {
+          title: storyData.title,
+          content: storyData.content,
+          languageId: languages[storyData.language].id,
+          userId: users.admin.id,
+          type: storyData.type,
+          verified: true
+        }
+      });
+      console.log(`Created story: ${storyData.title}`);
+    }
+
+    console.log('\nSeed data created successfully!');
+    console.log('\nTest Credentials:');
+    Object.entries(seedConfig.users).forEach(([role, user]) => {
+      console.log(`\n${role.toUpperCase()}:`);
+      console.log(`Email: ${user.email}`);
+      console.log(`Password: ${user.password}`);
     });
 
-    // Create languages
-    const languages = await Promise.all([
-      prisma.language.upsert({
-        where: { code: 'EN' },
-        update: {},
-        create: {
-          name: 'English',
-          code: 'EN',
-          isEndangered: false
-        }
-      }),
-      prisma.language.upsert({
-        where: { code: 'NY' },
-        update: {},
-        create: {
-          name: 'Nyanja',
-          code: 'NY',
-          isEndangered: false
-        }
-      }),
-      prisma.language.upsert({
-        where: { code: 'BE' },
-        update: {},
-        create: {
-          name: 'Bemba',
-          code: 'BE',
-          isEndangered: false
-        }
-      })
-    ]);
-
-    // Create some initial tags
-    const tags = await Promise.all([
-      prisma.tag.upsert({
-        where: { name: 'greetings' },
-        update: {},
-        create: { name: 'greetings' }
-      }),
-      prisma.tag.upsert({
-        where: { name: 'basic' },
-        update: {},
-        create: { name: 'basic' }
-      }),
-      prisma.tag.upsert({
-        where: { name: 'common' },
-        update: {},
-        create: { name: 'common' }
-      })
-    ]);
-
-    // Create some sample words with translations
-    const sampleWords = [
-      {
-        original: 'hello',
-        languageId: languages[0].id,
-        difficulty: 1,
-        addedById: admin.id,
-        approved: true,
-        translations: {
-          create: {
-            translation: 'moni',
-            userId: admin.id,
-            verified: true
-          }
-        },
-        tags: {
-          create: {
-            tagId: tags[0].id
-          }
-        }
-      },
-      {
-        original: 'muli bwanji',
-        languageId: languages[1].id,
-        difficulty: 1,
-        addedById: admin.id,
-        approved: true,
-        translations: {
-          create: {
-            translation: 'how are you',
-            userId: admin.id,
-            verified: true
-          }
-        },
-        tags: {
-          create: [
-            { tagId: tags[0].id },
-            { tagId: tags[1].id }
-          ]
-        }
-      }
-    ];
-
-    for (const word of sampleWords) {
-      await prisma.word.upsert({
-        where: {
-          original_languageId: {
-            original: word.original,
-            languageId: word.languageId
-          }
-        },
-        update: {},
-        create: word
-      });
-    }
-
-    // Create sample stories
-    const sampleStories = [
-      {
-        title: 'The Village Tale',
-        content: 'Once upon a time in a small village...',
-        languageId: languages[1].id,
-        userId: admin.id,
-        type: 'STORY',
-        verified: true
-      },
-      {
-        title: 'Traditional Proverb',
-        content: 'The wisdom of our ancestors...',
-        languageId: languages[2].id,
-        userId: admin.id,
-        type: 'PROVERB',
-        verified: true
-      }
-    ];
-
-    for (const story of sampleStories) {
-      await prisma.story.create({
-        data: story
-      });
-    }
-
-    console.log('Seed data created successfully');
   } catch (error) {
     console.error('Error seeding data:', error);
     process.exit(1);
