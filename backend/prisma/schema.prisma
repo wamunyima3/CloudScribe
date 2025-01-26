@@ -32,6 +32,9 @@ model User {
   updatedAt     DateTime  @updatedAt
   preferences   Json?     // Store user preferences as JSON
   settings      Json?     // User settings and preferences
+  googleId      String?   @unique
+  githubId      String?   @unique
+  oauthTokens   OAuthTokens[]
   
   // Relations with cascading deletes
   translations  Translation[] @relation("UserTranslations")
@@ -298,6 +301,18 @@ model UserActivity {
   @@index([userId])
   @@index([createdAt])
   @@index([ip])
+}
+
+model OAuthTokens {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  provider      String
+  accessToken   String
+  refreshToken  String?
+  expiresAt     DateTime
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, provider])
 }
 
 enum UserRole {

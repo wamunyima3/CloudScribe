@@ -3,12 +3,14 @@
 ## Core Infrastructure
 - [x] Logger Implementation
   - [x] Create logger.js with proper configurations
+  - [x] Add log rotation
   - [x] Add log levels for different environments
   - [x] Add request ID tracking
   - [ ] Add log rotation
 
 - [x] Response Utility
   - [x] Create standardized API response format
+  - [x] Add pagination helper
   - [x] Add error response formatting
   - [ ] Add pagination helper
 
@@ -21,15 +23,14 @@
 
 - [x] Database Migrations
   - [x] Create initial migration
-  - [ ] Add seed data
+  - [x] Add seed data
   - [x] Add migration scripts to package.json
 
 ## Authentication & Authorization
 - [x] Auth Service Implementation
-  - [x] JWT implementation
-  - [ ] Complete password reset flow
-  - [ ] Add email verification
-  - [ ] Add OAuth integration
+  - [x] Complete password reset flow
+  - [x] Add email verification
+  - [x] Add OAuth integration
   - [x] Add session management
 
 - [ ] Role-Based Access Control

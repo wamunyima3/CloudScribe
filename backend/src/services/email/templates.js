@@ -1,37 +1,29 @@
 const { formatDate } = require('../../utils/date');
+const baseUrl = process.env.BASE_URL;
 
 const templates = {
-  welcome: (user) => ({
-    subject: 'Welcome to CloudScribe!',
+  welcome: (username) => ({
+    subject: 'Welcome to our platform!',
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1>Welcome to CloudScribe!</h1>
-        <p>Hi ${user.username},</p>
-        <p>Thank you for joining CloudScribe. We're excited to have you as part of our community!</p>
-        <p>To get started, please verify your email address:</p>
-        <a href="${process.env.FRONTEND_URL}/verify-email?token=${user.verifyToken}" 
-           style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">
-          Verify Email
-        </a>
-        <p>This link will expire in 24 hours.</p>
-      </div>
+      <h1>Welcome ${username}!</h1>
+      <p>We're excited to have you on board.</p>
+      <p>Get started by exploring our features:</p>
+      <ul>
+        <li><a href="${baseUrl}/profile">Complete your profile</a></li>
+        <li><a href="${baseUrl}/explore">Explore content</a></li>
+        <li><a href="${baseUrl}/settings">Customize your settings</a></li>
+      </ul>
     `
   }),
 
-  passwordReset: (user) => ({
-    subject: 'Reset Your Password',
+  passwordReset: (token) => ({
+    subject: 'Password Reset Request',
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1>Password Reset Request</h1>
-        <p>Hi ${user.username},</p>
-        <p>You recently requested to reset your password. Click the button below to proceed:</p>
-        <a href="${process.env.FRONTEND_URL}/reset-password?token=${user.resetToken}" 
-           style="display: inline-block; padding: 10px 20px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 5px;">
-          Reset Password
-        </a>
-        <p>This link will expire in 1 hour.</p>
-        <p>If you didn't request this, please ignore this email or contact support if you have concerns.</p>
-      </div>
+      <h1>Password Reset</h1>
+      <p>You requested a password reset. Click the link below to reset your password:</p>
+      <a href="${baseUrl}/reset-password/${token}">Reset Password</a>
+      <p>This link will expire in 1 hour.</p>
+      <p>If you didn't request this, please ignore this email.</p>
     `
   }),
 
@@ -69,6 +61,16 @@ const templates = {
           View Full Stats
         </a>
       </div>
+    `
+  }),
+
+  emailVerification: (token) => ({
+    subject: 'Verify your email address',
+    html: `
+      <h1>Email Verification</h1>
+      <p>Please click the link below to verify your email address:</p>
+      <a href="${baseUrl}/verify-email/${token}">Verify Email</a>
+      <p>This link will expire in 24 hours.</p>
     `
   })
 };

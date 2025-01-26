@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/home/ekum/Development/Wamunyima/Projects/CloudScribe/backend/logs/.73d45e2a312e18bc98eada4decef0983bc6e467f-audit.json",
+    "files": [
+        {
+            "date": 1737906392933,
+            "name": "/home/ekum/Development/Wamunyima/Projects/CloudScribe/backend/logs/application-2025-01-26.log",
+            "hash": "9456bd2b9652bcd747f110ac254ed8fd59f0cd30b10575317f5cdaab191de080"
+        }
+    ],
+    "hashType": "sha256"
+}

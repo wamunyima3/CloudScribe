@@ -52,6 +52,16 @@ const transports = {
     datePattern: 'YYYY-MM-DD',
     maxFiles: '30d',
     format: formats.file
+  }),
+
+  // Application logs
+  application: new winston.transports.DailyRotateFile({
+    filename: path.join(logDir, 'application-%DATE%.log'),
+    datePattern: 'YYYY-MM-DD',
+    zippedArchive: true,
+    maxSize: '20m',
+    maxFiles: '14d',
+    format: formats.file
   })
 };
 
@@ -62,7 +72,9 @@ const logger = winston.createLogger({
   transports: [
     transports.console,
     transports.error,
-    transports.combined
+    transports.combined,
+    transports.access,
+    transports.application
   ]
 });
 

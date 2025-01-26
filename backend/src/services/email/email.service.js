@@ -70,6 +70,37 @@ class EmailService {
   async sendWeeklyDigest(user, stats) {
     return this.queue('weeklyDigest', { user, stats });
   }
+
+  async sendVerificationEmail(email, token) {
+    const template = templates.emailVerification(token);
+    return this.sendEmail(email, template.subject, template.html);
+  }
+
+  async sendPasswordReset(email, token) {
+    const template = templates.passwordReset(token);
+    return this.sendEmail(email, template.subject, template.html);
+  }
+
+  async sendWelcomeEmail(email, username) {
+    const template = templates.welcome(username);
+    return this.sendEmail(email, template.subject, template.html);
+  }
+
+  async sendEmail(to, subject, html) {
+    try {
+      const info = await this.transporter.sendMail({
+        from: process.env.SMTP_FROM,
+        to,
+        subject,
+        html
+      });
+      logger.info('Email sent successfully', { messageId: info.messageId });
+      return true;
+    } catch (error) {
+      logger.error('Email sending error:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new EmailService(); 

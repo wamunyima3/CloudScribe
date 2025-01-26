@@ -75,8 +75,47 @@ const createErrorResponse = (error) => {
   };
 };
 
+class ResponseUtil {
+  static paginateResponse(data, page, limit, total) {
+    const totalPages = Math.ceil(total / limit);
+    const hasNext = page < totalPages;
+    const hasPrev = page > 1;
+
+    return {
+      data,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages,
+        hasNext,
+        hasPrev,
+        nextPage: hasNext ? page + 1 : null,
+        prevPage: hasPrev ? page - 1 : null
+      }
+    };
+  }
+
+  static success(data, message = 'Success') {
+    return {
+      success: true,
+      message,
+      data
+    };
+  }
+
+  static error(message = 'Error', code = 500) {
+    return {
+      success: false,
+      message,
+      code
+    };
+  }
+}
+
 module.exports = {
   ApiResponse,
   createPaginationOptions,
-  createErrorResponse
+  createErrorResponse,
+  ResponseUtil
 }; 
