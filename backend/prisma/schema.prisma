@@ -275,6 +275,31 @@ model StoryTag {
   @@index([tagId])
 }
 
+model BlockedIP {
+  id        String   @id @default(cuid())
+  ip        String   @unique
+  reason    String?
+  blockedAt DateTime @default(now())
+  expiresAt DateTime?
+  
+  @@index([ip])
+  @@index([expiresAt])
+}
+
+model UserActivity {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  ip        String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([ip])
+}
+
 enum UserRole {
   ADMIN
   CURATOR

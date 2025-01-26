@@ -10,17 +10,17 @@ const { errorHandler } = require('../middleware/error.middleware');
 const routes = require('../api');
 const { logger, requestLogger } = require('../utils/logger');
 const notificationService = require('../services/notification/notification.service');
+const SecurityMiddleware = require('../middleware/security.middleware');
 
 const createApp = () => {
   const app = express();
   const server = http.createServer(app);
 
   // Security middleware
-  app.use(helmet());
-  app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-    credentials: true
-  }));
+  app.use(SecurityMiddleware.securityHeaders());
+  app.use(SecurityMiddleware.ipBlocking);
+  app.use(SecurityMiddleware.xssProtection);
+  app.use(SecurityMiddleware.sqlInjectionProtection);
 
   // Request ID and logging middleware
   app.use(requestLogger);
@@ -39,15 +39,27 @@ const createApp = () => {
   }));
 
   // Rate limiting
-  const limiter = rateLimit({
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-    max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
-    message: {
-      status: 'error',
-      message: 'Too many requests, please try again later.'
+  app.use('/api', SecurityMiddleware.rateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // Limit each IP to 100 requests per windowMs
+  }));
+
+  // Protected routes rate limiting
+  app.use('/api/protected/*', SecurityMiddleware.rateLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 50 // Stricter limit for protected routes
+  }));
+
+  // User-based rate limiting for authenticated routes
+  app.use('/api/auth/*', SecurityMiddleware.userRateLimiter);
+
+  // CSRF protection for non-GET requests
+  app.use((req, res, next) => {
+    if (req.method !== 'GET') {
+      return SecurityMiddleware.csrfProtection(req, res, next);
     }
+    next();
   });
-  app.use('/api', limiter);
 
   // Health check
   app.get('/health', (req, res) => {
