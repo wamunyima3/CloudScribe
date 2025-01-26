@@ -16,7 +16,14 @@
     "db:reset": "prisma migrate reset --force",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "docker:dev": "docker-compose up",
+    "docker:build": "docker-compose build",
+    "docker:prod": "docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d",
+    "backup:db": "scripts/backup-db.sh",
+    "restore:db": "scripts/restore-db.sh",
+    "deploy:prod": "scripts/deploy.sh",
+    "logs:prod": "scripts/logs.sh"
   },
   "keywords": [],
   "author": "",

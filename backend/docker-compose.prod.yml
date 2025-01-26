@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      target: production
+    restart: always
+    environment:
+      NODE_ENV: production
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+  db:
+    volumes:
+      - /var/lib/mysql-cloudscribe:/var/lib/mysql
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  redis:
+    volumes:
+      - /var/lib/redis-cloudscribe:/data
+    deploy:
+      placement:
+        constraints: [node.role == manager] 

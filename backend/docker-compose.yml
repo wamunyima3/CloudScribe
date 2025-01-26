@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  api:
+    container_name: cloudscribe-api
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - "${PORT}:${PORT}"
+    command: npm run dev
+    env_file: .env
+    depends_on:
+      - db
+      - redis
+    networks:
+      - cloudscribe-network
+
+  db:
+    container_name: cloudscribe-db
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - cloudscribe-network
+
+  redis:
+    container_name: cloudscribe-redis
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - cloudscribe-network
+
+volumes:
+  mysql-data:
+  redis-data:
+
+networks:
+  cloudscribe-network:
+    driver: bridge 
