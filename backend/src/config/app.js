@@ -11,6 +11,9 @@ const routes = require('../api');
 const { logger, requestLogger } = require('../utils/logger');
 const notificationService = require('../services/notification/notification.service');
 const SecurityMiddleware = require('../middleware/security.middleware');
+const MonitoringMiddleware = require('../middleware/monitoring.middleware');
+const healthService = require('../services/health/health.service');
+const monitoringService = require('../services/monitoring/monitoring.service');
 
 const createApp = () => {
   const app = express();
@@ -61,9 +64,28 @@ const createApp = () => {
     next();
   });
 
+  // Request tracking
+  app.use(MonitoringMiddleware.trackRequest);
+
   // Health check
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  app.get('/health', async (req, res) => {
+    const health = await healthService.getFullHealth();
+    res.status(health.status === 'healthy' ? 200 : 503).json(health);
+  });
+
+  app.get('/health/db', async (req, res) => {
+    const dbHealth = await healthService.checkDatabase();
+    res.status(dbHealth.status === 'healthy' ? 200 : 503).json(dbHealth);
+  });
+
+  app.get('/health/redis', async (req, res) => {
+    const redisHealth = await healthService.checkRedis();
+    res.status(redisHealth.status === 'healthy' ? 200 : 503).json(redisHealth);
+  });
+
+  app.get('/metrics', (req, res) => {
+    const metrics = monitoringService.getMetrics();
+    res.json(metrics);
   });
 
   // Root route
@@ -105,6 +127,7 @@ const createApp = () => {
   });
 
   // Error handling
+  app.use(MonitoringMiddleware.errorMonitoring);
   app.use(errorHandler);
 
   // Handle WebSocket upgrade
