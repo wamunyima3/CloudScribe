@@ -6,6 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["fullTextIndex"]
 }
 
 datasource db {
@@ -22,136 +23,218 @@ model User {
   points        Int       @default(0)
   streak        Int       @default(0)
   lastLoginDate DateTime  @default(now())
+  lastActive    DateTime  @default(now())
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  preferences   Json?      // Store user preferences as JSON
+  preferences   Json?     // Store user preferences as JSON
+  settings      Json?     // User settings and preferences
   
-  // Relations
-  translations  Translation[]
-  stories       Story[]
-  comments      Comment[]
-  addedWords    Word[]     @relation("AddedWords")
-  auditLogs     AuditLog[]
-  notifications Notification[]
-  lastActive    DateTime     @default(now())
-  settings      Json?        // User settings and preferences
-  achievements  Achievement[]
+  // Relations with cascading deletes
+  translations  Translation[] @relation("UserTranslations")
+  stories       Story[]       @relation("UserStories")
+  comments      Comment[]     @relation("UserComments")
+  addedWords    Word[]        @relation("AddedWords")
+  auditLogs     AuditLog[]    @relation("UserAuditLogs")
+  notifications Notification[] @relation("UserNotifications")
+  achievements  Achievement[]  @relation("UserAchievements")
+
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([lastActive])
 }
 
 model Language {
-  id          String    @id @default(cuid())
-  name        String
-  code        String    @unique
-  isEndangered Boolean  @default(false)
+  id           String  @id @default(cuid())
+  name         String  @db.VarChar(100)
+  code         String  @unique @db.Char(2)
+  isEndangered Boolean @default(false)
   
   // Relations
-  words       Word[]
-  stories     Story[]
+  words        Word[]   @relation("LanguageWords")
+  stories      Story[]  @relation("LanguageStories")
+
+  @@index([code])
+  @@index([isEndangered])
 }
 
 model Word {
   id          String    @id @default(cuid())
-  original    String
+  original    String    @db.VarChar(255)
   languageId  String
-  language    Language  @relation(fields: [languageId], references: [id])
-  difficulty  Int       @default(1) // 1-5 scale
+  language    Language  @relation("LanguageWords", fields: [languageId], references: [id], onDelete: Restrict)
+  difficulty  Int       @default(1) @db.TinyInt
   approved    Boolean   @default(false)
   addedById   String
-  addedBy     User      @relation("AddedWords", fields: [addedById], references: [id])
+  addedBy     User      @relation("AddedWords", fields: [addedById], references: [id], onDelete: Restrict)
   
-  // Relations
-  translations Translation[]
-  examples     Example[]
-  synonyms     Synonym[]
-  antonyms     Antonym[]
-  tags         WordTag[]  // Relation to tags
+  // Relations with cascading deletes
+  translations Translation[] @relation("WordTranslations")
+  examples     Example[]     @relation("WordExamples")
+  synonyms     Synonym[]     @relation("WordSynonyms")
+  antonyms     Antonym[]     @relation("WordAntonyms")
+  tags         WordTag[]     @relation("WordTags")
+
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  @@unique([original, languageId])
+  @@index([languageId])
+  @@index([addedById])
+  @@index([approved])
+  @@index([difficulty])
 }
 
 model Translation {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   wordId      String
-  word        Word      @relation(fields: [wordId], references: [id])
+  word        Word     @relation("WordTranslations", fields: [wordId], references: [id], onDelete: Cascade)
   userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  translation String
-  verified    Boolean   @default(false)
-  createdAt   DateTime  @default(now())
+  user        User     @relation("UserTranslations", fields: [userId], references: [id], onDelete: Restrict)
+  translation String   @db.Text
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([wordId])
+  @@index([userId])
+  @@index([verified])
 }
 
 model Story {
   id          String    @id @default(cuid())
-  title       String
-  content     String
+  title       String    @db.VarChar(255)
+  content     String    @db.Text
   languageId  String
-  language    Language  @relation(fields: [languageId], references: [id])
+  language    Language  @relation("LanguageStories", fields: [languageId], references: [id], onDelete: Restrict)
   userId      String
-  user        User      @relation(fields: [userId], references: [id])
+  user        User      @relation("UserStories", fields: [userId], references: [id], onDelete: Restrict)
   type        StoryType
   verified    Boolean   @default(false)
+  
+  // Relations with cascading deletes
+  comments    Comment[] @relation("StoryComments")
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  
-  // Relations
-  comments    Comment[]
+
+  @@index([languageId])
+  @@index([userId])
+  @@index([type])
+  @@index([verified])
+  @@fulltext([title, content])
 }
 
 model Comment {
-  id        String    @id @default(cuid())
-  content   String
-  storyId   String
-  story     Story     @relation(fields: [storyId], references: [id])
+  id        String   @id @default(cuid())
+  content   String   @db.Text
   userId    String
-  user      User      @relation(fields: [userId], references: [id])
-  createdAt DateTime  @default(now())
+  user      User     @relation("UserComments", fields: [userId], references: [id], onDelete: Restrict)
+  storyId   String
+  story     Story    @relation("StoryComments", fields: [storyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([storyId])
 }
 
 model Example {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   wordId      String
-  word        Word      @relation(fields: [wordId], references: [id])
-  content     String
-  translation String
-  createdAt   DateTime  @default(now())
+  word        Word     @relation("WordExamples", fields: [wordId], references: [id], onDelete: Cascade)
+  content     String   @db.Text
+  translation String   @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([wordId])
 }
 
 model Synonym {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   wordId      String
-  word        Word      @relation(fields: [wordId], references: [id])
+  word        Word     @relation("WordSynonyms", fields: [wordId], references: [id], onDelete: Cascade)
   synonymWord String
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([wordId])
+  @@index([synonymWord])
 }
 
 model Antonym {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   wordId      String
-  word        Word      @relation(fields: [wordId], references: [id])
+  word        Word     @relation("WordAntonyms", fields: [wordId], references: [id], onDelete: Cascade)
   antonymWord String
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([wordId])
+  @@index([antonymWord])
 }
 
 model AuditLog {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   userId    String
-  user      User      @relation(fields: [userId], references: [id])
-  action    String
-  entity    String
-  entityId  String
+  user      User     @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: Restrict)
+  action    String   @db.VarChar(100)
+  entity    String   @db.VarChar(50)
+  entityId  String   @db.VarChar(50)
   details   Json?
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
 }
 
 model Notification {
-  id        String    @id @default(cuid())
+  id        String           @id @default(cuid())
   userId    String
-  user      User      @relation(fields: [userId], references: [id])
+  user      User             @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
   type      NotificationType
-  message   String
-  read      Boolean   @default(false)
+  message   String           @db.Text
+  read      Boolean          @default(false)
   data      Json?
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([read])
+  @@index([createdAt])
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("UserAchievements", fields: [userId], references: [id], onDelete: Cascade)
+  type        String   @db.VarChar(50)
+  earnedAt    DateTime @default(now())
+  metadata    Json?
+
+  @@index([userId])
+  @@index([type])
+  @@index([earnedAt])
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique @db.VarChar(50)
   createdAt DateTime  @default(now())
+  words     WordTag[] @relation("TagWords")
+
+  @@index([name])
+}
+
+model WordTag {
+  id        String   @id @default(cuid())
+  wordId    String
+  word      Word     @relation("WordTags", fields: [wordId], references: [id], onDelete: Cascade)
+  tagId     String
+  tag       Tag      @relation("TagWords", fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([wordId, tagId])
+  @@index([wordId])
+  @@index([tagId])
 }
 
 enum UserRole {
@@ -175,33 +258,4 @@ enum NotificationType {
   STORY_COMMENT
   ACHIEVEMENT
   SYSTEM
-}
-
-model Achievement {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  type        String
-  earnedAt    DateTime  @default(now())
-  metadata    Json?
-}
-
-// New model for tags
-model Tag {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  createdAt   DateTime  @default(now())
-  words       WordTag[]
-}
-
-// Junction table for Word-Tag many-to-many relationship
-model WordTag {
-  id        String   @id @default(cuid())
-  wordId    String
-  word      Word     @relation(fields: [wordId], references: [id])
-  tagId     String
-  tag       Tag      @relation(fields: [tagId], references: [id])
-  createdAt DateTime @default(now())
-
-  @@unique([wordId, tagId])
 }
