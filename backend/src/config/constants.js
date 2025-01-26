@@ -1,0 +1,31 @@
+const constants = {
+  ROLES: {
+    ADMIN: 'ADMIN',
+    CURATOR: 'CURATOR',
+    CONTRIBUTOR: 'CONTRIBUTOR',
+    USER: 'USER',
+    VISITOR: 'VISITOR'
+  },
+  
+  STORY_TYPES: {
+    STORY: 'STORY',
+    PROVERB: 'PROVERB',
+    POEM: 'POEM',
+    SONG: 'SONG'
+  },
+
+  NOTIFICATION_TYPES: {
+    WORD_APPROVED: 'WORD_APPROVED',
+    TRANSLATION_ADDED: 'TRANSLATION_ADDED',
+    STORY_COMMENT: 'STORY_COMMENT',
+    ACHIEVEMENT: 'ACHIEVEMENT',
+    SYSTEM: 'SYSTEM'
+  },
+
+  PAGINATION: {
+    DEFAULT_PAGE: 1,
+    DEFAULT_LIMIT: 10
+  }
+};
+
+module.exports = constants; 
