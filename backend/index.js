@@ -1,38 +1,98 @@
+require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 const { PrismaClient } = require('@prisma/client');
 
 const app = express();
 const prisma = new PrismaClient();
 
+// Middleware
+app.use(helmet());
+app.use(cors());
 app.use(express.json());
+app.use(morgan('dev'));
 
-// Routes
-app.get('/', (req, res) => {
-  res.send('Welcome to the backend!');
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use('/api', limiter); // Apply rate limiting to API routes
+
+// API Routes
+const apiRouter = express.Router();
+
+// Health check endpoint
+apiRouter.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
 });
 
-// Example CRUD for Users
-app.get('/users', async (req, res) => {
-  const users = await prisma.user.findMany();
-  res.json(users);
+// Dictionary routes
+apiRouter.get('/dictionary/search', async (req, res, next) => {
+  try {
+    const { language, difficulty, tag, word } = req.query;
+    const words = await prisma.word.findMany({
+      where: {
+        AND: [
+          language ? { languageId: language } : {},
+          word ? { original: { contains: word } } : {},
+          // Add more filters as needed
+        ]
+      },
+      include: {
+        translations: true,
+        language: true
+      }
+    });
+    res.json(words);
+  } catch (error) {
+    next(error);
+  }
 });
 
-app.post('/users', async (req, res) => {
-  const { name, email } = req.body;
-  const user = await prisma.user.create({
-    data: { name, email },
+// Stories routes
+apiRouter.get('/stories', async (req, res, next) => {
+  try {
+    const stories = await prisma.story.findMany({
+      include: {
+        language: true,
+        user: {
+          select: {
+            username: true,
+            id: true
+          }
+        }
+      }
+    });
+    res.json(stories);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Mount API routes
+app.use('/api', apiRouter);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ 
+    error: 'Something went wrong!',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
-  res.json(user);
 });
 
-// Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
 
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send({ error: 'Something went wrong!' });
-  });
-  
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('Received SIGTERM signal. Closing HTTP server...');
+  await prisma.$disconnect();
+  process.exit(0);
+});

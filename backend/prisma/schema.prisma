@@ -9,14 +9,179 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  passwordHash  String
+  role          UserRole  @default(USER)
+  points        Int       @default(0)
+  streak        Int       @default(0)
+  lastLoginDate DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  preferences   Json?      // Store user preferences as JSON
+  
+  // Relations
+  translations  Translation[]
+  stories       Story[]
+  comments      Comment[]
+  addedWords    Word[]     @relation("AddedWords")
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  lastActive    DateTime     @default(now())
+  settings      Json?        // User settings and preferences
+  achievements  Achievement[]
 }
 
+model Language {
+  id          String    @id @default(cuid())
+  name        String
+  code        String    @unique
+  isEndangered Boolean  @default(false)
+  
+  // Relations
+  words       Word[]
+  stories     Story[]
+}
+
+model Word {
+  id          String    @id @default(cuid())
+  original    String
+  languageId  String
+  language    Language  @relation(fields: [languageId], references: [id])
+  difficulty  Int       @default(1) // 1-5 scale
+  tags        String[]  // Array of tags for categorization
+  approved    Boolean   @default(false)
+  addedById   String
+  addedBy     User      @relation("AddedWords", fields: [addedById], references: [id])
+  
+  // Relations
+  translations Translation[]
+  examples     Example[]
+  synonyms     Synonym[]
+  antonyms     Antonym[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Translation {
+  id          String    @id @default(cuid())
+  wordId      String
+  word        Word      @relation(fields: [wordId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  translation String
+  verified    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+}
+
+model Story {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  languageId  String
+  language    Language  @relation(fields: [languageId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  type        StoryType
+  verified    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  comments    Comment[]
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  content   String
+  storyId   String
+  story     Story     @relation(fields: [storyId], references: [id])
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+}
+
+model Example {
+  id          String    @id @default(cuid())
+  wordId      String
+  word        Word      @relation(fields: [wordId], references: [id])
+  content     String
+  translation String
+  createdAt   DateTime  @default(now())
+}
+
+model Synonym {
+  id          String    @id @default(cuid())
+  wordId      String
+  word        Word      @relation(fields: [wordId], references: [id])
+  synonymWord String
+  createdAt   DateTime  @default(now())
+}
+
+model Antonym {
+  id          String    @id @default(cuid())
+  wordId      String
+  word        Word      @relation(fields: [wordId], references: [id])
+  antonymWord String
+  createdAt   DateTime  @default(now())
+}
+
+model AuditLog {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  details   Json?
+  createdAt DateTime  @default(now())
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  type      NotificationType
+  message   String
+  read      Boolean   @default(false)
+  data      Json?
+  createdAt DateTime  @default(now())
+}
+
+enum UserRole {
+  ADMIN
+  CURATOR
+  CONTRIBUTOR
+  USER
+  VISITOR
+}
+
+enum StoryType {
+  STORY
+  PROVERB
+  POEM
+  SONG
+}
+
+enum NotificationType {
+  WORD_APPROVED
+  TRANSLATION_ADDED
+  STORY_COMMENT
+  ACHIEVEMENT
+  SYSTEM
+}
+
+model Achievement {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  type        String
+  earnedAt    DateTime  @default(now())
+  metadata    Json?
+}
