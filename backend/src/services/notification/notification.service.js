@@ -1,4 +1,5 @@
 const WebSocket = require('ws');
+const jwt = require('jsonwebtoken');
 const { prisma } = require('../../config/database');
 const { logger } = require('../../utils/logger');
 const templates = require('./templates');
@@ -14,8 +15,30 @@ class NotificationService {
     this.wss = new WebSocket.Server({ noServer: true });
 
     this.wss.on('connection', (ws, userId) => {
+      if (!ws || !userId) {
+        logger.error('Invalid WebSocket connection attempt: missing ws or userId');
+        if (ws) {
+          ws.close(1008, 'Invalid connection parameters');
+        }
+        return;
+      }
+
+      // Check if user already has an existing connection
+      const existingConnection = this.connections.get(userId);
+      if (existingConnection) {
+        logger.info(`Closing existing connection for user: ${userId}`);
+        existingConnection.close(1000, 'New connection initiated');
+      }
+
+      // Set up the new connection
       this.connections.set(userId, ws);
+      ws.isAlive = true;
       logger.info(`WebSocket connected for user: ${userId}`);
+
+      // Set up ping-pong to detect stale connections
+      ws.on('pong', () => {
+        ws.isAlive = true;
+      });
 
       ws.on('close', () => {
         this.connections.delete(userId);
@@ -23,8 +46,24 @@ class NotificationService {
       });
 
       ws.on('error', (error) => {
-        logger.error('WebSocket error:', error);
+        logger.error(`WebSocket error for user ${userId}:`, error);
+        this.connections.delete(userId);
       });
+    });
+
+    // Set up connection health check interval
+    const interval = setInterval(() => {
+      this.wss.clients.forEach((ws) => {
+        if (ws.isAlive === false) {
+          return ws.terminate();
+        }
+        ws.isAlive = false;
+        ws.ping(() => {});
+      });
+    }, 30000); // Check every 30 seconds
+
+    this.wss.on('close', () => {
+      clearInterval(interval);
     });
   }
 
@@ -134,9 +173,28 @@ class NotificationService {
   }
 
   sendToUser(userId, message) {
-    const connection = this.connections.get(userId);
-    if (connection && connection.readyState === WebSocket.OPEN) {
+    try {
+      const connection = this.connections.get(userId);
+      
+      if (!connection) {
+        logger.debug(`No active WebSocket connection for user: ${userId}`);
+        return false;
+      }
+
+      if (connection.readyState !== WebSocket.OPEN) {
+        logger.warn(`WebSocket not in OPEN state for user: ${userId}, current state: ${connection.readyState}`);
+        // Clean up stale connection
+        this.connections.delete(userId);
+        return false;
+      }
+
       connection.send(JSON.stringify(message));
+      return true;
+    } catch (error) {
+      logger.error(`Failed to send message to user ${userId}:`, error);
+      // Clean up potentially corrupted connection
+      this.connections.delete(userId);
+      return false;
     }
   }
 
@@ -163,10 +221,30 @@ class NotificationService {
   }
 
   authenticateWebSocket(request) {
-    // Implement your WebSocket authentication logic here
-    // Example: validate token from query parameters or headers
-    const token = new URL(request.url, 'http://localhost').searchParams.get('token');
     try {
+      // First check Authorization header (more secure)
+      const authHeader = request.headers['authorization'];
+      let token;
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      } else {
+        // Fallback to Sec-WebSocket-Protocol header which is more secure than URL params
+        const protocols = request.headers['sec-websocket-protocol'];
+        if (protocols) {
+          const authProtocol = protocols.split(', ').find(protocol => protocol.startsWith('token.'));
+          if (authProtocol) {
+            token = authProtocol.substring(6);
+          }
+        }
+      }
+
+      // If no token found in headers, reject the connection
+      if (!token) {
+        logger.warn('WebSocket connection attempt with no authentication token');
+        return null;
+      }
+
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       return decoded.userId;
     } catch (error) {

@@ -58,10 +58,34 @@ class CacheService {
 
   async clear(pattern) {
     try {
-      const keys = await this.client.keys(pattern);
-      if (keys.length > 0) {
-        await this.client.del(...keys);
-      }
+      const pipeline = this.client.pipeline();
+      let cursor = '0';
+      let totalKeys = 0;
+
+      do {
+        // Use SCAN instead of KEYS for better performance
+        const [nextCursor, keys] = await this.client.scan(
+          cursor,
+          'MATCH',
+          pattern,
+          'COUNT',
+          100 // Process in smaller batches
+        );
+        
+        cursor = nextCursor;
+        
+        if (keys.length > 0) {
+          pipeline.del(...keys);
+          totalKeys += keys.length;
+        }
+
+        // Execute pipeline when batch size reaches 1000 or on last iteration
+        if (totalKeys >= 1000 || cursor === '0') {
+          await pipeline.exec();
+          totalKeys = 0;
+        }
+      } while (cursor !== '0');
+
       return true;
     } catch (error) {
       logger.error('Cache clear error:', error);

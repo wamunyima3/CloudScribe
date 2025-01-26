@@ -42,8 +42,19 @@ const strategies = {
       return cacheService.del(key);
     },
 
-    // Pattern-based invalidation
+    // Pattern-based invalidation with safety checks
     async pattern(pattern) {
+      if (!pattern || typeof pattern !== 'string') {
+        logger.error('Invalid pattern provided for cache invalidation');
+        return false;
+      }
+
+      // Prevent dangerous patterns
+      if (pattern === '*' || pattern.startsWith('*')) {
+        logger.error('Dangerous cache invalidation pattern detected:', pattern);
+        return false;
+      }
+
       return cacheService.clear(pattern);
     },
 

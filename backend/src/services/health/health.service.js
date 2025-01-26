@@ -1,6 +1,7 @@
 const { prisma } = require('../../config/database');
 const cacheService = require('../cache/cache.service');
 const { logger } = require('../../utils/logger');
+const emailService = require('../email/email.service');
 
 class HealthService {
   async checkDatabase() {
