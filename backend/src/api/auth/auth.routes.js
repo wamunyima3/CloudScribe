@@ -20,6 +20,24 @@ router.post('/login',
   AuthController.login
 );
 
+router.get('/verify-email',
+  validate(authSchema.verifyEmail),
+  auditLog('EMAIL_VERIFY'),
+  AuthController.verifyEmail
+);
+
+router.post('/request-reset',
+  validate(authSchema.requestReset),
+  auditLog('PASSWORD_RESET_REQUEST'),
+  AuthController.requestPasswordReset
+);
+
+router.post('/reset-password',
+  validate(authSchema.resetPassword),
+  auditLog('PASSWORD_RESET'),
+  AuthController.resetPassword
+);
+
 // Protected routes
 router.use(authMiddleware);
 

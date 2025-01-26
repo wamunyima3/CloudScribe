@@ -84,6 +84,40 @@ class AuthController {
       throw error;
     }
   }
+
+  static async verifyEmail(req, res) {
+    try {
+      await AuthService.verifyEmail(req.query.token);
+      return ApiResponse.success(res, null, 'Email verified successfully');
+    } catch (error) {
+      logger.error('Email verification error:', error);
+      throw error;
+    }
+  }
+
+  static async requestPasswordReset(req, res) {
+    try {
+      await AuthService.requestPasswordReset(req.body.email);
+      return ApiResponse.success(
+        res, 
+        null, 
+        'If your email exists in our system, you will receive a password reset link'
+      );
+    } catch (error) {
+      logger.error('Password reset request error:', error);
+      throw error;
+    }
+  }
+
+  static async resetPassword(req, res) {
+    try {
+      await AuthService.resetPassword(req.query.token, req.body.password);
+      return ApiResponse.success(res, null, 'Password reset successfully');
+    } catch (error) {
+      logger.error('Password reset error:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = AuthController; 

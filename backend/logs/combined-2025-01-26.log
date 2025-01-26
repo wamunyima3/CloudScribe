@@ -13,3 +13,18 @@
 {"level":"info","message":"Database connected successfully","service":"cloudscribe-api","timestamp":"2025-01-26T14:59:54.072Z"}
 {"level":"info","message":"Database connected successfully","service":"cloudscribe-api","timestamp":"2025-01-26T14:59:54.072Z"}
 {"level":"info","message":"Server running on port 3000 in development mode","service":"cloudscribe-api","timestamp":"2025-01-26T14:59:54.074Z"}
+{"level":"info","message":"Database connected successfully","service":"cloudscribe-api","timestamp":"2025-01-26T15:04:34.904Z"}
+{"level":"info","message":"Database connected successfully","service":"cloudscribe-api","timestamp":"2025-01-26T15:04:34.905Z"}
+{"level":"info","message":"Server running on port 3000 in development mode","service":"cloudscribe-api","timestamp":"2025-01-26T15:04:34.906Z"}
+{"level":"info","message":"Database connected successfully","service":"cloudscribe-api","timestamp":"2025-01-26T15:04:50.000Z"}
+{"level":"info","message":"Database connected successfully","service":"cloudscribe-api","timestamp":"2025-01-26T15:04:50.000Z"}
+{"level":"info","message":"Server running on port 3000 in development mode","service":"cloudscribe-api","timestamp":"2025-01-26T15:04:50.002Z"}
+{"level":"info","message":"Database connected successfully","service":"cloudscribe-api","timestamp":"2025-01-26T15:04:53.422Z"}
+{"level":"info","message":"Database connected successfully","service":"cloudscribe-api","timestamp":"2025-01-26T15:04:53.423Z"}
+{"level":"info","message":"Server running on port 3000 in development mode","service":"cloudscribe-api","timestamp":"2025-01-26T15:04:53.425Z"}
+{"level":"info","message":"Database connected successfully","service":"cloudscribe-api","timestamp":"2025-01-26T15:04:58.795Z"}
+{"level":"info","message":"Database connected successfully","service":"cloudscribe-api","timestamp":"2025-01-26T15:04:58.796Z"}
+{"level":"info","message":"Server running on port 3000 in development mode","service":"cloudscribe-api","timestamp":"2025-01-26T15:04:58.797Z"}
+{"level":"info","message":"Database connected successfully","service":"cloudscribe-api","timestamp":"2025-01-26T15:05:01.037Z"}
+{"level":"info","message":"Database connected successfully","service":"cloudscribe-api","timestamp":"2025-01-26T15:05:01.037Z"}
+{"level":"info","message":"Server running on port 3000 in development mode","service":"cloudscribe-api","timestamp":"2025-01-26T15:05:01.040Z"}

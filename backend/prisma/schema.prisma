@@ -20,6 +20,10 @@ model User {
   username      String    @unique
   passwordHash  String
   role          UserRole  @default(USER)
+  emailVerified Boolean   @default(false)
+  verifyToken   String?   @unique
+  resetToken    String?   @unique
+  resetTokenExp DateTime?
   points        Int       @default(0)
   streak        Int       @default(0)
   lastLoginDate DateTime  @default(now())
