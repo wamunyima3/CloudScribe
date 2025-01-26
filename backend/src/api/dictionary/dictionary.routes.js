@@ -5,11 +5,13 @@ const { authMiddleware } = require('../../middleware/auth.middleware');
 const RBACMiddleware = require('../../middleware/rbac.middleware');
 const { Permissions } = require('../../config/permissions');
 const { dictionarySchema } = require('./dictionary.validation');
+const CacheMiddleware = require('../../middleware/cache.middleware');
 
 const router = express.Router();
 
-// Public routes
+// Public routes with caching
 router.get('/search',
+  CacheMiddleware.route('dictionary:search', 1800), // 30 minutes cache
   validate(dictionarySchema.searchQuery),
   DictionaryController.searchWords
 );

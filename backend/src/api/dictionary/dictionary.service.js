@@ -1,6 +1,7 @@
 const { prisma } = require('../../config/database');
 const { NotFoundError, ValidationError } = require('../../utils/errors');
 const { logger } = require('../../utils/logger');
+const cacheStrategies = require('../../services/cache/strategies');
 
 class DictionaryService {
   async searchWords({ query, language, difficulty, tags, skip, limit, sortBy = 'createdAt', order = 'desc' }) {
@@ -122,6 +123,10 @@ class DictionaryService {
           }
         }
       });
+
+      // Invalidate related caches
+      await cacheStrategies.invalidation.collection('dictionary:search');
+      await cacheStrategies.invalidation.entity('word', word.id);
 
       return word;
     } catch (error) {
