@@ -6,11 +6,26 @@ const emailService = require('../../services/email.service');
 const { ValidationError } = require('../../utils/errors');
 const { logger } = require('../../utils/logger');
 
+/**
+ * Authentication Service
+ * @class AuthService
+ * @description Handles user authentication, registration, and token management
+ */
 class AuthService {
   generateToken(userId) {
     return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '24h' });
   }
 
+  /**
+   * Register a new user
+   * @async
+   * @param {Object} userData - User registration data
+   * @param {string} userData.email - User's email
+   * @param {string} userData.username - User's username
+   * @param {string} userData.password - User's password
+   * @returns {Promise<Object>} Created user object
+   * @throws {ValidationError} If email or username already exists
+   */
   async register(userData) {
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -66,6 +81,15 @@ class AuthService {
     return true;
   }
 
+  /**
+   * Authenticate user and generate token
+   * @async
+   * @param {Object} credentials - Login credentials
+   * @param {string} credentials.email - User's email
+   * @param {string} credentials.password - User's password
+   * @returns {Promise<Object>} Authentication token and user data
+   * @throws {ValidationError} If credentials are invalid
+   */
   async login(credentials) {
     const user = await prisma.user.findUnique({
       where: { email: credentials.email }
