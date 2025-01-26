@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -8,9 +9,11 @@ const rateLimit = require('express-rate-limit');
 const { errorHandler } = require('../middleware/error.middleware');
 const routes = require('../api');
 const { logger, requestLogger } = require('../utils/logger');
+const notificationService = require('../services/notification/notification.service');
 
 const createApp = () => {
   const app = express();
+  const server = http.createServer(app);
 
   // Security middleware
   app.use(helmet());
@@ -92,7 +95,16 @@ const createApp = () => {
   // Error handling
   app.use(errorHandler);
 
-  return app;
+  // Handle WebSocket upgrade
+  server.on('upgrade', (request, socket, head) => {
+    if (request.url.startsWith('/ws/notifications')) {
+      notificationService.handleUpgrade(request, socket, head);
+    } else {
+      socket.destroy();
+    }
+  });
+
+  return server;
 };
 
 module.exports = createApp; 
