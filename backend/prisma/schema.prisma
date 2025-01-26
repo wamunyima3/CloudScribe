@@ -113,10 +113,15 @@ model Story {
   userId      String
   user        User      @relation("UserStories", fields: [userId], references: [id], onDelete: Restrict)
   type        StoryType
-  verified    Boolean   @default(false)
+  status      StoryStatus @default(PENDING)
+  moderatedBy String?
+  moderatedAt DateTime?
+  moderationReason String?   @db.Text
   
   // Relations with cascading deletes
   comments    Comment[] @relation("StoryComments")
+  ratings     Rating[]  @relation("StoryRatings")
+  tags        StoryTag[] @relation("StoryTags")
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -124,7 +129,7 @@ model Story {
   @@index([languageId])
   @@index([userId])
   @@index([type])
-  @@index([verified])
+  @@index([status])
   @@fulltext([title, content])
 }
 
@@ -241,6 +246,35 @@ model WordTag {
   @@index([tagId])
 }
 
+model Rating {
+  id        String   @id @default(cuid())
+  storyId   String
+  story     Story    @relation("StoryRatings", fields: [storyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("UserRatings", fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int      @db.TinyInt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storyId, userId])
+  @@index([storyId])
+  @@index([userId])
+  @@index([rating])
+}
+
+model StoryTag {
+  id        String   @id @default(cuid())
+  storyId   String
+  story     Story    @relation("StoryTags", fields: [storyId], references: [id], onDelete: Cascade)
+  tagId     String
+  tag       Tag      @relation("TagStories", fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([storyId, tagId])
+  @@index([storyId])
+  @@index([tagId])
+}
+
 enum UserRole {
   ADMIN
   CURATOR
@@ -262,4 +296,10 @@ enum NotificationType {
   STORY_COMMENT
   ACHIEVEMENT
   SYSTEM
+}
+
+enum StoryStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
