@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -55,7 +55,6 @@ model Word {
   languageId  String
   language    Language  @relation(fields: [languageId], references: [id])
   difficulty  Int       @default(1) // 1-5 scale
-  tags        String[]  // Array of tags for categorization
   approved    Boolean   @default(false)
   addedById   String
   addedBy     User      @relation("AddedWords", fields: [addedById], references: [id])
@@ -65,6 +64,7 @@ model Word {
   examples     Example[]
   synonyms     Synonym[]
   antonyms     Antonym[]
+  tags         WordTag[]  // Relation to tags
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -184,4 +184,24 @@ model Achievement {
   type        String
   earnedAt    DateTime  @default(now())
   metadata    Json?
+}
+
+// New model for tags
+model Tag {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  createdAt   DateTime  @default(now())
+  words       WordTag[]
+}
+
+// Junction table for Word-Tag many-to-many relationship
+model WordTag {
+  id        String   @id @default(cuid())
+  wordId    String
+  word      Word     @relation(fields: [wordId], references: [id])
+  tagId     String
+  tag       Tag      @relation(fields: [tagId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([wordId, tagId])
 }

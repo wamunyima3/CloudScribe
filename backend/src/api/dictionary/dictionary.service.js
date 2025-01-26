@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 const { NotFoundError, ValidationError } = require('../../utils/errors');
 
 class DictionaryService {
-  static async searchWords({ query, language, difficulty, page, limit }) {
+  static async searchWords({ query, language, difficulty, tags, page, limit }) {
     const skip = (page - 1) * limit;
     const where = {
       AND: [
@@ -11,9 +11,18 @@ class DictionaryService {
         difficulty ? { difficulty } : {},
         query ? { 
           OR: [
-            { original: { contains: query, mode: 'insensitive' } },
-            { translations: { some: { translation: { contains: query, mode: 'insensitive' } } } }
+            { original: { contains: query } },
+            { translations: { some: { translation: { contains: query } } } }
           ]
+        } : {},
+        tags ? {
+          tags: {
+            some: {
+              tag: {
+                name: { in: tags }
+              }
+            }
+          }
         } : {}
       ]
     };
@@ -24,9 +33,11 @@ class DictionaryService {
         include: {
           translations: true,
           language: true,
-          examples: true,
-          synonyms: true,
-          antonyms: true
+          tags: {
+            include: {
+              tag: true
+            }
+          }
         },
         skip,
         take: limit,
@@ -38,27 +49,58 @@ class DictionaryService {
     return { data, total };
   }
 
-  static async addWord(wordData) {
-    const { languageId, original } = wordData;
-
-    // Check for duplicate words
+  static async addWord({ original, languageId, difficulty, tags, ...rest }) {
     const existingWord = await prisma.word.findFirst({
-      where: {
-        original,
-        languageId
-      }
+      where: { original, languageId }
     });
 
     if (existingWord) {
       throw new ValidationError('Word already exists in this language');
     }
 
-    return prisma.word.create({
-      data: wordData,
-      include: {
-        language: true,
-        translations: true
+    // Create word and its tags in a transaction
+    return prisma.$transaction(async (tx) => {
+      // Create the word
+      const word = await tx.word.create({
+        data: {
+          original,
+          languageId,
+          difficulty,
+          ...rest
+        }
+      });
+
+      // Handle tags if provided
+      if (tags && tags.length > 0) {
+        // Create or connect tags
+        for (const tagName of tags) {
+          const tag = await tx.tag.upsert({
+            where: { name: tagName },
+            create: { name: tagName },
+            update: {}
+          });
+
+          // Create word-tag connection
+          await tx.wordTag.create({
+            data: {
+              wordId: word.id,
+              tagId: tag.id
+            }
+          });
+        }
       }
+
+      // Return word with its tags
+      return tx.word.findUnique({
+        where: { id: word.id },
+        include: {
+          tags: {
+            include: {
+              tag: true
+            }
+          }
+        }
+      });
     });
   }
 
