@@ -7,7 +7,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const { errorHandler } = require('../middleware/error.middleware');
 const routes = require('../api');
-const logger = require('../utils/logger');
+const { logger, requestLogger } = require('../utils/logger');
 
 const createApp = () => {
   const app = express();
@@ -19,11 +19,21 @@ const createApp = () => {
     credentials: true
   }));
 
+  // Request ID and logging middleware
+  app.use(requestLogger);
+
   // General middleware
   app.use(compression());
   app.use(cookieParser());
   app.use(express.json());
-  app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+  app.use(morgan('combined', { 
+    stream: { 
+      write: (message) => {
+        logger.info(message.trim());
+      }
+    },
+    skip: (req) => req.path === '/health'  // Skip logging health checks
+  }));
 
   // Rate limiting
   const limiter = rateLimit({
