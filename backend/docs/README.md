@@ -112,10 +112,10 @@ npm start
 This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
 
 ## 👥 Team
-- Project Lead: [Name]
-- Core Contributors: [Names]
-- Contact: team@cloudscribe.com
+- Project Lead: [Wamunyima Mukelabai]
+- Core Contributors: [Yet to come]
+- Contact: wamunyimamukelabai3@gmail.com
 
 ## 🙏 Acknowledgments
-- [List of major dependencies/tools used]
+- [We will provide a list of major dependencies/tools used]
 - [Special thanks to contributors] 
