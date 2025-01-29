@@ -5,10 +5,16 @@ const emailQueue = require('./queue');
 
 class EmailService {
   constructor() {
+    this.transporter = null;
+    this.queue = emailQueue;
+    this.initialize();
+  }
+
+  initialize() {
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: process.env.SMTP_PORT,
-      secure: process.env.SMTP_SECURE === 'true',
+      secure: false,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
@@ -19,6 +25,15 @@ class EmailService {
     this.transporter.verify()
       .then(() => logger.info('SMTP connection established'))
       .catch(error => logger.error('SMTP connection failed:', error));
+  }
+
+  async close() {
+    if (this.queue) {
+      await this.queue.close();
+    }
+    if (this.transporter) {
+      this.transporter.close();
+    }
   }
 
   async send(type, data) {
@@ -51,7 +66,7 @@ class EmailService {
 
   // Queue email for sending
   async queue(type, data, options = {}) {
-    return emailQueue.addToQueue(type, data, options);
+    return this.queue.addToQueue(type, data, options);
   }
 
   // Convenience methods for common emails
@@ -103,4 +118,12 @@ class EmailService {
   }
 }
 
-module.exports = new EmailService(); 
+const emailService = new EmailService();
+
+if (process.env.NODE_ENV === 'test') {
+  afterAll(async () => {
+    await emailService.close();
+  });
+}
+
+module.exports = emailService; 

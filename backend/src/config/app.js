@@ -32,6 +32,7 @@ const createApp = () => {
   app.use(compression());
   app.use(cookieParser());
   app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
   app.use(morgan('combined', { 
     stream: { 
       write: (message) => {

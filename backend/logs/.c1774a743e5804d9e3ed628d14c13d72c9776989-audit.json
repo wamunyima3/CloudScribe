@@ -9,6 +9,11 @@
             "date": 1737903308273,
             "name": "/home/ekum/Development/Wamunyima/Projects/CloudScribe/backend/logs/combined-2025-01-26.log",
             "hash": "5a1488c67b89b40a6397d84c9393ab6d046ae67fb103d50b7278378c03a29d7b"
+        },
+        {
+            "date": 1738177050276,
+            "name": "/home/ekum/Development/Wamunyima/Projects/CloudScribe/backend/logs/combined-2025-01-29.log",
+            "hash": "07445fcfc2c30a831985f5a4f75abd54b8013cf898d0cfd8b33af2a6f3d18f47"
         }
     ],
     "hashType": "sha256"

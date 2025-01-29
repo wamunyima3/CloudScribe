@@ -1,5 +1,6 @@
 const { ApiResponse } = require('../utils/response');
 const { logger } = require('../utils/logger');
+const { UnauthorizedError, ForbiddenError } = require('../utils/errors');
 
 const roles = {
   ADMIN: 4,
@@ -31,6 +32,21 @@ const permissions = {
   'system:logs': ['ADMIN']
 };
 
+const rolePermissions = {
+  ADMIN: ['*'],
+  MODERATOR: [
+    'dictionary:create',
+    'dictionary:update',
+    'dictionary:delete',
+    'user:read'
+  ],
+  USER: [
+    'dictionary:create',
+    'dictionary:update',
+    'user:read'
+  ]
+};
+
 class RBACMiddleware {
   static hasRole(requiredRole) {
     return (req, res, next) => {
@@ -57,29 +73,22 @@ class RBACMiddleware {
 
   static hasPermission(permission) {
     return (req, res, next) => {
-      try {
-        const userRole = req.user?.role || 'VISITOR';
-        
-        if (!permissions[permission]) {
-          logger.error(`Unknown permission: ${permission}`);
-          return ApiResponse.error(res, 'Invalid permission configuration', 500);
-        }
-        
-        if (permissions[permission].includes(userRole)) {
-          return next();
-        }
-        
-        logger.warn('Insufficient permission', {
-          userId: req.user?.id,
-          permission,
-          userRole
-        });
-        
-        return ApiResponse.error(res, 'Insufficient permissions', 403);
-      } catch (error) {
-        logger.error('RBAC permission check error:', error);
-        return ApiResponse.error(res, 'Authorization error', 500);
+      if (!req.user) {
+        throw new UnauthorizedError('Authentication required');
       }
+
+      // Admin has all permissions
+      if (req.user.role === 'ADMIN') {
+        return next();
+      }
+
+      // Check role-based permissions
+      const permissions = this.getRolePermissions(req.user.role);
+      if (!permissions.includes(permission)) {
+        throw new UnauthorizedError('Insufficient permissions');
+      }
+
+      next();
     };
   }
 
@@ -110,6 +119,59 @@ class RBACMiddleware {
       } catch (error) {
         logger.error('RBAC permissions check error:', error);
         return ApiResponse.error(res, 'Authorization error', 500);
+      }
+    };
+  }
+
+  static requireOwnership(getResourceUserId) {
+    return async (req, res, next) => {
+      if (!req.user) {
+        throw new UnauthorizedError('Authentication required');
+      }
+
+      const resourceUserId = await getResourceUserId(req);
+      if (req.user.id !== resourceUserId && req.user.role !== 'ADMIN') {
+        throw new UnauthorizedError('Resource ownership required');
+      }
+
+      next();
+    };
+  }
+
+  static getRolePermissions(role) {
+    const permissions = {
+      ADMIN: ['*'],
+      CURATOR: [
+        'dictionary:create',
+        'dictionary:update',
+        'dictionary:delete',
+        'dictionary:approve'
+      ],
+      CONTRIBUTOR: [
+        'dictionary:create',
+        'dictionary:update'
+      ],
+      USER: [
+        'dictionary:read'
+      ]
+    };
+
+    return permissions[role] || [];
+  }
+
+  static check(permission) {
+    return (req, res, next) => {
+      try {
+        const userRole = req.user?.role || 'USER';
+        const permissions = rolePermissions[userRole] || [];
+        
+        if (permissions.includes('*') || permissions.includes(permission)) {
+          return next();
+        }
+        
+        throw new ForbiddenError('Insufficient permissions');
+      } catch (error) {
+        next(error);
       }
     };
   }

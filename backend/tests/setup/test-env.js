@@ -1,0 +1,10 @@
+process.env.NODE_ENV = 'test';
+process.env.PORT = 3001;
+process.env.DATABASE_URL = 'mysql://ekum:24673832@localhost:3306/cloudscribe_test';
+process.env.REDIS_URL = 'redis://localhost:6379/1';
+process.env.JWT_SECRET = 'test-secret';
+process.env.JWT_EXPIRES_IN = '1h';
+process.env.SMTP_HOST = 'smtp.test.com';
+process.env.SMTP_PORT = 587;
+process.env.SMTP_USER = 'test@test.com';
+process.env.SMTP_PASS = 'test-pass'; 

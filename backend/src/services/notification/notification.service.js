@@ -4,9 +4,12 @@ const { prisma } = require('../../config/database');
 const { logger } = require('../../utils/logger');
 const templates = require('./templates');
 const cacheService = require('../cache/cache.service');
+const { redis } = require('../../config/redis');
 
 class NotificationService {
   constructor() {
+    this.wss = null;
+    this.healthCheckInterval = null;
     this.connections = new Map();
     this.initializeWebSocket();
   }
@@ -52,7 +55,7 @@ class NotificationService {
     });
 
     // Set up connection health check interval
-    const interval = setInterval(() => {
+    this.healthCheckInterval = setInterval(() => {
       this.wss.clients.forEach((ws) => {
         if (ws.isAlive === false) {
           return ws.terminate();
@@ -63,7 +66,8 @@ class NotificationService {
     }, 30000); // Check every 30 seconds
 
     this.wss.on('close', () => {
-      clearInterval(interval);
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
     });
   }
 
@@ -252,6 +256,32 @@ class NotificationService {
       return null;
     }
   }
+
+  close() {
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+    }
+    
+    if (this.wss) {
+      for (const [_, ws] of this.connections) {
+        ws.close();
+      }
+      this.connections.clear();
+      this.wss.close();
+      this.wss = null;
+    }
+  }
 }
 
-module.exports = new NotificationService(); 
+// Create singleton instance
+const notificationService = new NotificationService();
+
+// Add cleanup for tests
+if (process.env.NODE_ENV === 'test') {
+  afterAll(() => {
+    notificationService.close();
+  });
+}
+
+module.exports = notificationService; 

@@ -3,27 +3,19 @@ const { logger } = require('../../utils/logger');
 
 class CacheService {
   constructor() {
-    this.client = new Redis(process.env.REDIS_URL, {
+    this.redis = new Redis(process.env.REDIS_URL, {
       maxRetriesPerRequest: 3,
-      enableReadyCheck: true,
-      retryStrategy: (times) => {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-      }
+      retryStrategy: (times) => Math.min(times * 50, 2000)
     });
 
-    this.client.on('error', (error) => {
+    this.redis.on('error', (error) => {
       logger.error('Redis connection error:', error);
-    });
-
-    this.client.on('connect', () => {
-      logger.info('Redis connection established');
     });
   }
 
   async get(key) {
     try {
-      const value = await this.client.get(key);
+      const value = await this.redis.get(key);
       return value ? JSON.parse(value) : null;
     } catch (error) {
       logger.error('Cache get error:', error);
@@ -33,12 +25,7 @@ class CacheService {
 
   async set(key, value, ttl = 3600) {
     try {
-      await this.client.set(
-        key,
-        JSON.stringify(value),
-        'EX',
-        ttl
-      );
+      await this.redis.set(key, JSON.stringify(value), 'EX', ttl);
       return true;
     } catch (error) {
       logger.error('Cache set error:', error);
@@ -48,7 +35,7 @@ class CacheService {
 
   async del(key) {
     try {
-      await this.client.del(key);
+      await this.redis.del(key);
       return true;
     } catch (error) {
       logger.error('Cache delete error:', error);
@@ -58,13 +45,13 @@ class CacheService {
 
   async clear(pattern) {
     try {
-      const pipeline = this.client.pipeline();
+      const pipeline = this.redis.pipeline();
       let cursor = '0';
       let totalKeys = 0;
 
       do {
         // Use SCAN instead of KEYS for better performance
-        const [nextCursor, keys] = await this.client.scan(
+        const [nextCursor, keys] = await this.redis.scan(
           cursor,
           'MATCH',
           pattern,
@@ -94,14 +81,7 @@ class CacheService {
   }
 
   generateKey(prefix, params) {
-    const sortedParams = Object.keys(params)
-      .sort()
-      .reduce((acc, key) => {
-        acc[key] = params[key];
-        return acc;
-      }, {});
-    
-    return `${prefix}:${JSON.stringify(sortedParams)}`;
+    return `${prefix}:${JSON.stringify(params)}`;
   }
 }
 

@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { prisma } = require('../../config/database');
-const emailService = require('../../services/email.service');
+const emailService = require('../../services/email/email.service');
 const { ValidationError } = require('../../utils/errors');
 const { logger } = require('../../utils/logger');
 
@@ -27,38 +27,29 @@ class AuthService {
    * @throws {ValidationError} If email or username already exists
    */
   async register(userData) {
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: userData.email },
-          { username: userData.username }
-        ]
-      }
-    });
-
-    if (existingUser) {
-      throw new ValidationError('Email or username already exists');
-    }
-
-    const verifyToken = crypto.randomBytes(32).toString('hex');
     const passwordHash = await bcrypt.hash(userData.password, 10);
+    
+    try {
+      const user = await prisma.user.create({
+        data: {
+          email: userData.email,
+          username: userData.username,
+          passwordHash,
+          role: 'USER',
+          points: 0,
+          streak: 0,
+          lastLoginDate: new Date(),
+          lastActive: new Date()
+        }
+      });
 
-    const user = await prisma.user.create({
-      data: {
-        email: userData.email,
-        username: userData.username,
-        passwordHash,
-        verifyToken
+      return user;
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new ValidationError('Email already exists');
       }
-    });
-
-    await emailService.sendVerificationEmail(user, verifyToken);
-
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.username
-    };
+      throw error;
+    }
   }
 
   async verifyEmail(token) {
@@ -95,30 +86,22 @@ class AuthService {
       where: { email: credentials.email }
     });
 
-    if (!user || !(await bcrypt.compare(credentials.password, user.passwordHash))) {
+    if (!user) {
       throw new ValidationError('Invalid credentials');
     }
 
-    if (!user.emailVerified) {
-      throw new ValidationError('Please verify your email first');
+    const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
+    if (!isValid) {
+      throw new ValidationError('Invalid credentials');
     }
 
-    const token = this.generateToken(user.id);
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginDate: new Date() }
-    });
-
-    return {
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        role: user.role
-      }
-    };
+    return { user, token };
   }
 
   async requestPasswordReset(email) {

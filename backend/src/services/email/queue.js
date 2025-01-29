@@ -1,6 +1,9 @@
-const Queue = require('bull');
+const Bull = require('bull');
 const { logger } = require('../../utils/logger');
 const emailService = require('./email.service');
+
+// Get the Queue constructor
+const Queue = Bull.default || Bull;
 
 // Create email queue
 const emailQueue = new Queue('email', process.env.REDIS_URL, {
@@ -9,8 +12,7 @@ const emailQueue = new Queue('email', process.env.REDIS_URL, {
     backoff: {
       type: 'exponential',
       delay: 1000
-    },
-    removeOnComplete: true
+    }
   }
 });
 
@@ -28,12 +30,11 @@ emailQueue.process(async (job) => {
 });
 
 // Handle failed jobs
-emailQueue.on('failed', (job, error) => {
-  logger.error('Email job failed', {
+emailQueue.on('failed', (job, err) => {
+  logger.error('Email job failed:', {
     jobId: job.id,
     type: job.data.type,
-    attempts: job.attemptsMade,
-    error
+    error: err.message
   });
 });
 
@@ -42,15 +43,9 @@ emailQueue.on('error', error => {
   logger.error('Email queue error:', error);
 });
 
-module.exports = {
-  addToQueue: async (type, data, options = {}) => {
-    try {
-      const job = await emailQueue.add({ type, data }, options);
-      logger.info(`Email job added to queue: ${type}`, { jobId: job.id });
-      return job;
-    } catch (error) {
-      logger.error('Failed to add email job to queue:', error);
-      throw error;
-    }
-  }
-}; 
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  await emailQueue.close();
+});
+
+module.exports = emailQueue; 

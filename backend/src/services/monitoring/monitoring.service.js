@@ -6,18 +6,30 @@ class MonitoringService {
     this.metrics = {
       requestCount: 0,
       errorCount: 0,
-      slowRequests: 0
+      responseTime: [],
+      lastReset: new Date()
     };
+    this.metricsInterval = null;
+    this.initialize();
+  }
 
-    // Reset metrics every hour
-    setInterval(() => this.resetMetrics(), 3600000);
+  initialize() {
+    this.metricsInterval = setInterval(() => this.resetMetrics(), 3600000);
+  }
+
+  close() {
+    if (this.metricsInterval) {
+      clearInterval(this.metricsInterval);
+      this.metricsInterval = null;
+    }
   }
 
   resetMetrics() {
     this.metrics = {
       requestCount: 0,
       errorCount: 0,
-      slowRequests: 0
+      responseTime: [],
+      lastReset: new Date()
     };
   }
 
@@ -100,4 +112,14 @@ class MonitoringService {
   }
 }
 
-module.exports = new MonitoringService(); 
+// Create singleton instance
+const monitoringService = new MonitoringService();
+
+// Add cleanup for tests
+if (process.env.NODE_ENV === 'test') {
+  afterAll(() => {
+    monitoringService.close();
+  });
+}
+
+module.exports = monitoringService; 

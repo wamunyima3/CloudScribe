@@ -121,42 +121,11 @@ async function main() {
           languageId: languages[storyData.language].id,
           userId: users.admin.id,
           type: storyData.type,
-          verified: true
+          status: 'APPROVED'
         }
       });
       console.log(`Created story: ${storyData.title}`);
     }
-
-    // Seed default roles
-    const roles = await prisma.role.createMany({
-      data: [
-        { name: 'ADMIN', description: 'System Administrator' },
-        { name: 'USER', description: 'Regular User' },
-        { name: 'MODERATOR', description: 'Content Moderator' }
-      ],
-      skipDuplicates: true
-    });
-
-    // Seed default notification templates
-    const templates = await prisma.notificationTemplate.createMany({
-      data: [
-        {
-          type: 'WELCOME',
-          title: 'Welcome to our platform!',
-          body: 'We\'re glad to have you here. Start exploring!',
-          icon: '👋'
-        },
-        {
-          type: 'NEW_MESSAGE',
-          title: 'New Message Received',
-          body: 'You have received a new message from {{senderName}}',
-          icon: '✉️'
-        }
-      ],
-      skipDuplicates: true
-    });
-
-    console.log({ roles, templates });
 
     console.log('\nSeed data created successfully!');
     console.log('\nTest Credentials:');

@@ -1,26 +1,43 @@
-class ValidationError extends Error {
-  constructor(message) {
+class AppError extends Error {
+  constructor(message, statusCode = 500, errorCode = null) {
     super(message);
-    this.name = 'ValidationError';
+    this.statusCode = statusCode;
+    this.errorCode = errorCode;
+    this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
+    this.isOperational = true;
+
+    Error.captureStackTrace(this, this.constructor);
   }
 }
 
-class NotFoundError extends Error {
+class ValidationError extends AppError {
   constructor(message) {
-    super(message);
-    this.name = 'NotFoundError';
+    super(message, 400, 'VALIDATION_ERROR');
   }
 }
 
-class UnauthorizedError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = 'UnauthorizedError';
+class AuthenticationError extends AppError {
+  constructor(message = 'Authentication failed') {
+    super(message, 401, 'AUTH_ERROR');
+  }
+}
+
+class AuthorizationError extends AppError {
+  constructor(message = 'Not authorized') {
+    super(message, 403, 'FORBIDDEN');
+  }
+}
+
+class NotFoundError extends AppError {
+  constructor(message = 'Resource not found') {
+    super(message, 404, 'NOT_FOUND');
   }
 }
 
 module.exports = {
+  AppError,
   ValidationError,
-  NotFoundError,
-  UnauthorizedError
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError
 }; 

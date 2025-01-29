@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["fullTextIndex"]
 }
 
@@ -15,35 +15,38 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  username      String    @unique
+  id            String        @id @default(uuid())
+  email         String        @unique
+  username      String        @unique
   passwordHash  String
-  role          UserRole  @default(USER)
-  emailVerified Boolean   @default(false)
-  verifyToken   String?   @unique
-  resetToken    String?   @unique
+  role          UserRole      @default(USER)
+  emailVerified Boolean       @default(false)
+  verifyToken   String?       @unique
+  resetToken    String?       @unique
   resetTokenExp DateTime?
-  points        Int       @default(0)
-  streak        Int       @default(0)
-  lastLoginDate DateTime  @default(now())
-  lastActive    DateTime  @default(now())
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  preferences   Json?     // Store user preferences as JSON
-  settings      Json?     // User settings and preferences
-  googleId      String?   @unique
-  githubId      String?   @unique
+  points        Int           @default(0)
+  streak        Int           @default(0)
+  lastLoginDate DateTime      @default(now())
+  lastActive    DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  preferences   Json? // Store user preferences as JSON
+  settings      Json? // User settings and preferences
+  googleId      String?       @unique
+  githubId      String?       @unique
   oauthTokens   OAuthTokens[]
-  
+
   // Relations with cascading deletes
-  translations  Translation[] @relation("UserTranslations")
-  stories       Story[]       @relation("UserStories")
-  comments      Comment[]     @relation("UserComments")
-  addedWords    Word[]        @relation("AddedWords")
-  auditLogs     AuditLog[]    @relation("UserAuditLogs")
+  translations  Translation[]  @relation("UserTranslations")
+  stories       Story[]        @relation("UserStories")
+  comments      Comment[]      @relation("UserComments")
+  addedWords    Word[]         @relation("AddedWords")
+  auditLogs     AuditLog[]     @relation("UserAuditLogs")
   notifications Notification[] @relation("UserNotifications")
   achievements  Achievement[]  @relation("UserAchievements")
+  ratings       Rating[]       @relation("UserRatings")
+  activities    UserActivity[]
+  taggedStories StoryTag[]     @relation("UserTaggedStories")
 
   @@index([email])
   @@index([username])
@@ -56,25 +59,25 @@ model Language {
   name         String  @db.VarChar(100)
   code         String  @unique @db.Char(2)
   isEndangered Boolean @default(false)
-  
+
   // Relations
-  words        Word[]   @relation("LanguageWords")
-  stories      Story[]  @relation("LanguageStories")
+  words   Word[]  @relation("LanguageWords")
+  stories Story[] @relation("LanguageStories")
 
   @@index([code])
   @@index([isEndangered])
 }
 
 model Word {
-  id          String    @id @default(cuid())
-  original    String    @db.VarChar(255)
-  languageId  String
-  language    Language  @relation("LanguageWords", fields: [languageId], references: [id], onDelete: Restrict)
-  difficulty  Int       @default(1) @db.TinyInt
-  approved    Boolean   @default(false)
-  addedById   String
-  addedBy     User      @relation("AddedWords", fields: [addedById], references: [id], onDelete: Restrict)
-  
+  id         String   @id @default(cuid())
+  original   String   @db.VarChar(255)
+  languageId String
+  language   Language @relation("LanguageWords", fields: [languageId], references: [id], onDelete: Restrict)
+  difficulty Int      @default(1) @db.TinyInt
+  approved   Boolean  @default(false)
+  addedById  String
+  addedBy    User     @relation("AddedWords", fields: [addedById], references: [id], onDelete: Restrict)
+
   // Relations with cascading deletes
   translations Translation[] @relation("WordTranslations")
   examples     Example[]     @relation("WordExamples")
@@ -82,8 +85,8 @@ model Word {
   antonyms     Antonym[]     @relation("WordAntonyms")
   tags         WordTag[]     @relation("WordTags")
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([original, languageId])
   @@index([languageId])
@@ -108,32 +111,28 @@ model Translation {
 }
 
 model Story {
-  id          String    @id @default(cuid())
-  title       String    @db.VarChar(255)
-  content     String    @db.Text
-  languageId  String
-  language    Language  @relation("LanguageStories", fields: [languageId], references: [id], onDelete: Restrict)
-  userId      String
-  user        User      @relation("UserStories", fields: [userId], references: [id], onDelete: Restrict)
-  type        StoryType
-  status      StoryStatus @default(PENDING)
-  moderatedBy String?
-  moderatedAt DateTime?
-  moderationReason String?   @db.Text
-  
-  // Relations with cascading deletes
-  comments    Comment[] @relation("StoryComments")
-  ratings     Rating[]  @relation("StoryRatings")
-  tags        StoryTag[] @relation("StoryTags")
+  id         String      @id @default(uuid())
+  title      String      @db.VarChar(255)
+  content    String      @db.Text
+  type       StoryType   @default(STORY)
+  status     StoryStatus @default(PENDING)
+  languageId String
+  language   Language    @relation("LanguageStories", fields: [languageId], references: [id])
+  userId     String
+  user       User        @relation("UserStories", fields: [userId], references: [id])
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  // Relations
+  comments Comment[]  @relation("StoryComments")
+  ratings  Rating[]   @relation("StoryRatings")
+  tags     StoryTag[] @relation("StoryTags")
 
   @@index([languageId])
   @@index([userId])
   @@index([type])
   @@index([status])
-  @@fulltext([title, content])
+  @@index([createdAt])
 }
 
 model Comment {
@@ -215,12 +214,12 @@ model Notification {
 }
 
 model Achievement {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation("UserAchievements", fields: [userId], references: [id], onDelete: Cascade)
-  type        String   @db.VarChar(50)
-  earnedAt    DateTime @default(now())
-  metadata    Json?
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation("UserAchievements", fields: [userId], references: [id], onDelete: Cascade)
+  type     String   @db.VarChar(50)
+  earnedAt DateTime @default(now())
+  metadata Json?
 
   @@index([userId])
   @@index([type])
@@ -228,10 +227,11 @@ model Achievement {
 }
 
 model Tag {
-  id        String    @id @default(cuid())
-  name      String    @unique @db.VarChar(50)
-  createdAt DateTime  @default(now())
-  words     WordTag[] @relation("TagWords")
+  id        String     @id @default(uuid())
+  name      String     @unique
+  createdAt DateTime   @default(now())
+  words     WordTag[]  @relation("TagWords")
+  stories   StoryTag[] @relation("TagStories")
 
   @@index([name])
 }
@@ -250,47 +250,50 @@ model WordTag {
 }
 
 model Rating {
-  id        String   @id @default(cuid())
-  storyId   String
-  story     Story    @relation("StoryRatings", fields: [storyId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
   userId    String
   user      User     @relation("UserRatings", fields: [userId], references: [id], onDelete: Cascade)
+  storyId   String
+  story     Story    @relation("StoryRatings", fields: [storyId], references: [id], onDelete: Cascade)
   rating    Int      @db.TinyInt
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([storyId, userId])
-  @@index([storyId])
   @@index([userId])
+  @@index([storyId])
   @@index([rating])
 }
 
 model StoryTag {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   storyId   String
   story     Story    @relation("StoryTags", fields: [storyId], references: [id], onDelete: Cascade)
   tagId     String
+  userId    String
   tag       Tag      @relation("TagStories", fields: [tagId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserTaggedStories", fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@unique([storyId, tagId])
   @@index([storyId])
   @@index([tagId])
+  @@index([userId])
 }
 
 model BlockedIP {
-  id        String   @id @default(cuid())
-  ip        String   @unique
+  id        String    @id @default(cuid())
+  ip        String    @unique
   reason    String?
-  blockedAt DateTime @default(now())
+  blockedAt DateTime  @default(now())
   expiresAt DateTime?
-  
+
   @@index([ip])
   @@index([expiresAt])
 }
 
 model UserActivity {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   action    String
@@ -304,13 +307,13 @@ model UserActivity {
 }
 
 model OAuthTokens {
-  id            Int      @id @default(autoincrement())
-  userId        Int
-  provider      String
-  accessToken   String
-  refreshToken  String?
-  expiresAt     DateTime
-  user          User     @relation(fields: [userId], references: [id])
+  id           String   @id @default(uuid())
+  userId       String
+  provider     String
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime
+  user         User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, provider])
 }

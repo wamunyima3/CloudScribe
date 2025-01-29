@@ -4,9 +4,9 @@ const { prisma } = require('../config/database');
 const { logger } = require('../utils/logger');
 const { ApiResponse } = require('../utils/response');
 
-class SecurityMiddleware {
+const securityMiddleware = {
   // Basic security headers using helmet
-  static securityHeaders() {
+  securityHeaders() {
     return helmet({
       contentSecurityPolicy: {
         directives: {
@@ -33,10 +33,10 @@ class SecurityMiddleware {
       referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
       xssFilter: true
     });
-  }
+  },
 
   // Rate limiting middleware
-  static rateLimiter(options = {}) {
+  rateLimiter(options = {}) {
     const defaultOptions = {
       windowMs: 15 * 60 * 1000, // 15 minutes
       max: 100, // Limit each IP to 100 requests per windowMs
@@ -57,10 +57,10 @@ class SecurityMiddleware {
         return ApiResponse.error(res, 'Too many requests', 429);
       }
     });
-  }
+  },
 
   // User-based rate limiting
-  static async userRateLimiter(req, res, next) {
+  async userRateLimiter(req, res, next) {
     if (!req.user) return next();
 
     try {
@@ -85,10 +85,10 @@ class SecurityMiddleware {
       logger.error('User rate limit error:', error);
       next();
     }
-  }
+  },
 
   // SQL Injection protection
-  static sqlInjectionProtection(req, res, next) {
+  sqlInjectionProtection(req, res, next) {
     const checkForSQLInjection = (obj) => {
       const sqlPattern = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER)\b)|(['"])/i;
       return Object.values(obj).some(value => {
@@ -113,10 +113,10 @@ class SecurityMiddleware {
     }
 
     next();
-  }
+  },
 
   // XSS Protection
-  static xssProtection(req, res, next) {
+  xssProtection(req, res, next) {
     const sanitizeObject = (obj) => {
       Object.keys(obj).forEach(key => {
         if (typeof obj[key] === 'string') {
@@ -136,10 +136,10 @@ class SecurityMiddleware {
     if (req.query) sanitizeObject(req.query);
 
     next();
-  }
+  },
 
   // IP Blocking
-  static async ipBlocking(req, res, next) {
+  async ipBlocking(req, res, next) {
     try {
       const blockedIP = await prisma.blockedIP.findUnique({
         where: { ip: req.ip }
@@ -155,10 +155,10 @@ class SecurityMiddleware {
       logger.error('IP blocking error:', error);
       next();
     }
-  }
+  },
 
   // CSRF Protection
-  static csrfProtection(req, res, next) {
+  csrfProtection(req, res, next) {
     const token = req.headers['x-csrf-token'];
     const sessionToken = req.session?.csrfToken;
 
@@ -171,7 +171,24 @@ class SecurityMiddleware {
     }
 
     next();
-  }
-}
+  },
 
-module.exports = SecurityMiddleware; 
+  apiProtection: [
+    helmet(),
+    helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
+    helmet.noSniff(),
+    helmet.xssFilter(),
+    helmet.hidePoweredBy()
+  ],
+
+  corsOptions: {
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    credentials: true,
+    maxAge: 600
+  }
+};
+
+module.exports = securityMiddleware; 
