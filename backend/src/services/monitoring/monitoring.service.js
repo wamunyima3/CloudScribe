@@ -7,7 +7,8 @@ class MonitoringService {
       requestCount: 0,
       errorCount: 0,
       responseTime: [],
-      lastReset: new Date()
+      lastReset: new Date(),
+      slowRequests: 0
     };
     this.metricsInterval = null;
     this.initialize();
@@ -29,23 +30,38 @@ class MonitoringService {
       requestCount: 0,
       errorCount: 0,
       responseTime: [],
-      lastReset: new Date()
+      lastReset: new Date(),
+      slowRequests: 0
     };
   }
 
   async trackError(error, context = {}) {
-    this.metrics.errorCount++;
-
     try {
-      await prisma.errorLog.create({
-        data: {
-          message: error.message,
-          stack: error.stack,
-          code: error.code,
-          context: context,
-          severity: context.severity || 'error'
-        }
+      this.metrics.errorCount++;
+
+      // Log to console first
+      logger.error('Error tracked:', {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+        context
       });
+
+      // Try to log to database if available
+      try {
+        await prisma.errorLog.create({
+          data: {
+            message: error.message || 'Unknown error',
+            stack: error.stack,
+            code: error.code,
+            context: context,
+            severity: context.severity || 'error'
+          }
+        });
+      } catch (dbError) {
+        // If database logging fails, just log to console
+        logger.warn('Database error logging failed:', dbError);
+      }
 
       // Alert if error threshold exceeded
       if (this.metrics.errorCount > 100) { // Configurable threshold
@@ -55,49 +71,61 @@ class MonitoringService {
           metrics: this.metrics
         });
       }
-    } catch (logError) {
-      logger.error('Error tracking failed:', logError);
+    } catch (trackingError) {
+      logger.error('Error tracking failed:', trackingError);
     }
   }
 
   async trackPerformance(route, duration) {
-    this.metrics.requestCount++;
-    
-    if (duration > 1000) { // 1 second threshold
-      this.metrics.slowRequests++;
+    try {
+      this.metrics.requestCount++;
       
-      await prisma.performanceLog.create({
-        data: {
-          route,
-          duration,
-          timestamp: new Date()
+      if (duration > 1000) { // 1 second threshold
+        this.metrics.slowRequests++;
+        
+        try {
+          await prisma.performanceLog.create({
+            data: {
+              route,
+              duration,
+              timestamp: new Date()
+            }
+          });
+        } catch (dbError) {
+          logger.warn('Performance logging to database failed:', dbError);
         }
-      });
 
-      // Alert if performance threshold exceeded
-      if (this.metrics.slowRequests > 50) { // Configurable threshold
-        await this.sendAlert({
-          type: 'PERFORMANCE',
-          message: 'High number of slow requests detected',
-          metrics: this.metrics
-        });
+        // Alert if performance threshold exceeded
+        if (this.metrics.slowRequests > 50) { // Configurable threshold
+          await this.sendAlert({
+            type: 'PERFORMANCE',
+            message: 'High number of slow requests detected',
+            metrics: this.metrics
+          });
+        }
       }
+    } catch (error) {
+      logger.error('Performance tracking failed:', error);
     }
   }
 
   async sendAlert(alert) {
     try {
-      await prisma.alert.create({
-        data: {
-          type: alert.type,
-          message: alert.message,
-          data: alert.metrics
-        }
-      });
-
-      // You could integrate with external alerting services here
-      // Example: Send to Slack, email, SMS, etc.
+      // Log alert to console first
       logger.warn('System alert:', alert);
+
+      // Try to save to database if available
+      try {
+        await prisma.alert.create({
+          data: {
+            type: alert.type,
+            message: alert.message,
+            data: alert.metrics
+          }
+        });
+      } catch (dbError) {
+        logger.warn('Alert logging to database failed:', dbError);
+      }
     } catch (error) {
       logger.error('Alert sending failed:', error);
     }

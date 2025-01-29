@@ -2,7 +2,7 @@ const express = require('express');
 const { authMiddleware } = require('../../../middleware/auth.middleware');
 const { validateWord } = require('../../../middleware/validate.middleware');
 const DictionaryController = require('../controllers/dictionary.controller');
-const { RBACMiddleware } = require('../../../middleware/rbac.middleware');
+const RBACMiddleware = require('../../../middleware/rbac.middleware');
 
 const router = express.Router();
 

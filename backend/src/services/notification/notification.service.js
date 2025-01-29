@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
 const { prisma } = require('../../config/database');
 const { logger } = require('../../utils/logger');
-const templates = require('./templates');
+const templates = require('./notification.templates');
 const cacheService = require('../cache/cache.service');
 const { redis } = require('../../config/redis');
 

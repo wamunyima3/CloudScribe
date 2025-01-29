@@ -90,6 +90,8 @@ const securityMiddleware = {
   // SQL Injection protection
   sqlInjectionProtection(req, res, next) {
     const checkForSQLInjection = (obj) => {
+      if (!obj || typeof obj !== 'object') return false;
+      
       const sqlPattern = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER)\b)|(['"])/i;
       return Object.values(obj).some(value => {
         if (typeof value === 'string' && sqlPattern.test(value)) {
@@ -102,7 +104,10 @@ const securityMiddleware = {
       });
     };
 
-    if (checkForSQLInjection(req.body) || checkForSQLInjection(req.query)) {
+    const body = req.body || {};
+    const query = req.query || {};
+
+    if (checkForSQLInjection(body) || checkForSQLInjection(query)) {
       logger.warn('Potential SQL injection detected', {
         ip: req.ip,
         path: req.path,

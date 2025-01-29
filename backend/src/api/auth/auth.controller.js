@@ -13,7 +13,7 @@ class AuthController {
       if (error instanceof ValidationError) {
         return ApiResponse.error(res, error.message, 400);
       }
-      throw error;
+      return ApiResponse.error(res, error.message, 500);
     }
   }
 
@@ -35,7 +35,7 @@ class AuthController {
       if (error instanceof ValidationError) {
         return ApiResponse.error(res, error.message, 401);
       }
-      throw error;
+      return ApiResponse.error(res, error.message, 500);
     }
   }
 
@@ -58,7 +58,7 @@ class AuthController {
       return ApiResponse.success(res, { token }, 'Token refreshed');
     } catch (error) {
       logger.error('Token refresh error:', error);
-      throw error;
+      return ApiResponse.error(res, error.message, 500);
     }
   }
 
@@ -68,7 +68,7 @@ class AuthController {
       return ApiResponse.success(res, profile);
     } catch (error) {
       logger.error('Get profile error:', error);
-      throw error;
+      return ApiResponse.error(res, error.message, 500);
     }
   }
 
@@ -81,7 +81,7 @@ class AuthController {
       if (error instanceof ValidationError) {
         return ApiResponse.error(res, error.message, 400);
       }
-      throw error;
+      return ApiResponse.error(res, error.message, 500);
     }
   }
 
@@ -91,7 +91,7 @@ class AuthController {
       return ApiResponse.success(res, null, 'Email verified successfully');
     } catch (error) {
       logger.error('Email verification error:', error);
-      throw error;
+      return ApiResponse.error(res, error.message, 500);
     }
   }
 
@@ -105,7 +105,7 @@ class AuthController {
       );
     } catch (error) {
       logger.error('Password reset request error:', error);
-      throw error;
+      return ApiResponse.error(res, error.message, 500);
     }
   }
 
@@ -115,7 +115,7 @@ class AuthController {
       return ApiResponse.success(res, null, 'Password reset successfully');
     } catch (error) {
       logger.error('Password reset error:', error);
-      throw error;
+      return ApiResponse.error(res, error.message, 500);
     }
   }
 }

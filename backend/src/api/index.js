@@ -1,6 +1,6 @@
 const express = require('express');
 const authRoutes = require('./auth/auth.routes');
-const dictionaryRoutes = require('./dictionary/dictionary.routes');
+const dictionaryRoutes = require('./dictionary/routes/dictionary.routes');
 
 const router = express.Router();
 
